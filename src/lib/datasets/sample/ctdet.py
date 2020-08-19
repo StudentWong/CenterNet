@@ -27,6 +27,7 @@ class CTDetDataset(data.Dataset):
     return border // i
 
   def __getitem__(self, index):
+    # print(self._valid_ids)
     img_id = self.images[index]
     file_name = self.coco.loadImgs(ids=[img_id])[0]['file_name']
     img_path = os.path.join(self.img_dir, file_name)
@@ -98,7 +99,17 @@ class CTDetDataset(data.Dataset):
     gt_det = []
     for k in range(num_objs):
       ann = anns[k]
+      invalid = True
+      for valid_idx in self._valid_ids:
+        if valid_idx == ann['category_id']:
+          invalid = False
+          break
+      if invalid == True:
+        continue
+      # if ann['bbox'] !=
       bbox = self._coco_box_to_bbox(ann['bbox'])
+      # print(ann['category_id'])
+      # print(self.cat_ids[6])
       cls_id = int(self.cat_ids[ann['category_id']])
       if flipped:
         bbox[[0, 2]] = width - bbox[[2, 0]] - 1
@@ -142,4 +153,12 @@ class CTDetDataset(data.Dataset):
                np.zeros((1, 6), dtype=np.float32)
       meta = {'c': c, 's': s, 'gt_det': gt_det, 'img_id': img_id}
       ret['meta'] = meta
+    # cv2.imshow('1', ret['input'].transpose((1,2,0)))
+    # cv2.imshow('2', ret['hm'][0:3, :].transpose((1, 2, 0)))
+    # cv2.waitKey(0)
+    # print(ret['input'].shape)
+    # print(ret['hm'].shape)
+    # print(ret['ind'].shape)
+    # print(ret['wh'].shape)
+
     return ret
