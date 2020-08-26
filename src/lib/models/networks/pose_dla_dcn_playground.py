@@ -13,7 +13,6 @@ from torch import nn
 import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 
-from .DCNv2.dcn_v2 import DCN
 
 BN_MOMENTUM = 0.1
 logger = logging.getLogger(__name__)
@@ -393,6 +392,11 @@ class DLAUp(nn.Module):
     def __init__(self, startp, channels, scales, in_channels=None):
         super(DLAUp, self).__init__()
         self.startp = startp
+        # print('DLAUP_startp: ')
+        # print(self.startp)
+        # print('DLAUP_channels: ')
+        # print(channels)
+
         if in_channels is None:
             in_channels = channels
         self.channels = channels
@@ -400,6 +404,10 @@ class DLAUp(nn.Module):
         scales = np.array(scales, dtype=int)
         for i in range(len(channels) - 1):
             j = -i - 2
+            # print(i)
+            # print(j)
+            # print(in_channels[j:])
+            # print(scales[j:] // scales[j])
             setattr(self, 'ida_{}'.format(i),
                     IDAUp(channels[j], in_channels[j:],
                           scales[j:] // scales[j]))
@@ -411,6 +419,7 @@ class DLAUp(nn.Module):
         for i in range(len(layers) - self.startp - 1):
             ida = getattr(self, 'ida_{}'.format(i))
             ida(layers, len(layers) -i - 2, len(layers))
+            # print(len(layers))
             out.insert(0, layers[-1])
         return out
 
@@ -434,7 +443,7 @@ class DLASeg(nn.Module):
         self.first_level = int(np.log2(down_ratio))
         self.last_level = last_level
         # print(pretrained)
-        self.base = globals()[base_name](pretrained=pretrained)
+        self.base = dla34(pretrained=pretrained)
         #base = dla34(pretrained=pretrained)
         channels = self.base.channels
         scales = [2 ** i for i in range(len(channels[self.first_level:]))]
@@ -443,6 +452,8 @@ class DLASeg(nn.Module):
         if out_channel == 0:
             out_channel = channels[self.first_level]
 
+        # print(out_channel)
+        # print(channels[self.first_level:self.last_level])
         self.ida_up = IDAUp(out_channel, channels[self.first_level:self.last_level], 
                             [2 ** i for i in range(self.last_level - self.first_level)])
         
@@ -472,15 +483,32 @@ class DLASeg(nn.Module):
             self.__setattr__(head, fc)
 
     def forward(self, x):
+        # print(x.shape)
         x = self.base(x)
+        # for xx in x:
+        #     print(xx.shape)
+        # print(len(x))
         x = self.dla_up(x)
+
+        # for xx in x:
+        #     print(xx.shape)
+
+        # print('ALL_first_level:')
+        # print(self.first_level)
+        # print('ALL_last_level:')
+        # print(self.last_level)
+
 
         y = []
         for i in range(self.last_level - self.first_level):
             y.append(x[i].clone())
         self.ida_up(y, 0, len(y))
 
+        # for yy in y:
+        #     print(yy.shape)
+
         z = {}
+        # print(self.heads)
         for head in self.heads:
             z[head] = self.__getattr__(head)(y[-1])
         return [z]
@@ -494,5 +522,70 @@ def get_pose_net(num_layers, heads, head_conv=256, down_ratio=4):
                  last_level=5,
                  head_conv=head_conv)
   return model
+
+
+
+def gaussian_radius(det_size, min_overlap=0.7):
+  height, width = det_size
+
+  a1  = 1
+  b1  = (height + width)
+  c1  = width * height * (1 - min_overlap) / (1 + min_overlap)
+  sq1 = np.sqrt(b1 ** 2 - 4 * a1 * c1)
+  r1  = (b1 + sq1) / 2
+
+  a2  = 4
+  b2  = 2 * (height + width)
+  c2  = (1 - min_overlap) * width * height
+  sq2 = np.sqrt(b2 ** 2 - 4 * a2 * c2)
+  r2  = (b2 + sq2) / 2
+
+  a3  = 4 * min_overlap
+  b3  = -2 * min_overlap * (height + width)
+  c3  = (min_overlap - 1) * width * height
+  sq3 = np.sqrt(b3 ** 2 - 4 * a3 * c3)
+  r3  = (b3 + sq3) / 2
+  return min(r1, r2, r3)
+
+
+import cv2
+if __name__ == '__main__':
+    from src.lib.models.networks.DCNv2.dcn_v2 import DCN
+    #num_layers: 34
+    #heads: {'hm': 5, 'wh': 2, 'reg': 2}
+    #head_conv: 256
+    model = DLASeg(base_name='dla34', heads={'hm': 5, 'wh': 2, 'reg': 2},
+                   pretrained=True,
+                   down_ratio=4,
+                   final_kernel=1,
+                   last_level=5,
+                   head_conv=256)
+    # print(model)
+    ckpt = torch.load('/home/studentw/disk3/tracker/CenterNet/exp/ctdet/default/model_best.pth')
+    # print(ckpt['state_dict'].keys())
+    model.load_state_dict(ckpt['state_dict'])
+    model = model.cuda()
+
+    #input = torch.rand((5, 3, 384, 384), dtype=torch.float).cuda()
+    img = cv2.imread('/home/studentw/disk3/shangqi/test_jpg/200521002252.jpg')/255.0
+    # input = torch.tensor(img)
+    mean = np.array([0.40789654, 0.44719302, 0.47026115],
+                    dtype=np.float32).reshape(1, 1, 3)
+    std = np.array([0.28863828, 0.27408164, 0.27809835],
+                   dtype=np.float32).reshape(1, 1, 3)
+    inp = (img - mean) / std
+    inp = inp.transpose(2, 0, 1)
+
+    # print(img-mean)
+    input = torch.tensor(inp, dtype=torch.float).unsqueeze(0).cuda()
+    y = model(input)
+    # print(y[0].keys())
+    print(np.max(y[0]['hm'][0][0:1].permute(1, 2, 0).detach().cpu().numpy()))
+    print(np.min(y[0]['hm'][0][0:1].permute(1, 2, 0).detach().cpu().numpy()))
+    cv2.imshow('1', y[0]['hm'][0][0:1].permute(1, 2, 0).detach().cpu().numpy())
+    cv2.waitKey(0)
+    print(y[0]['hm'][0][0:1].permute(1, 2, 0))
+    print(y[0]['wh'].shape)
+    print(y[0]['reg'].shape)
 
 

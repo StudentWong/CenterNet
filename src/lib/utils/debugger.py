@@ -45,6 +45,15 @@ class Debugger(object):
       self.names = coco_class_name
     elif num_classes == 20 or dataset == 'pascal':
       self.names = pascal_class_name
+
+    elif num_classes == 5 or dataset == 'shangqi':
+      num_classes = 5
+      self.names = shangqi_class_name
+
+    elif num_classes == 3 or dataset == 'flir':
+      num_classes = 3
+      self.names = flir_class_name
+
     elif dataset == 'gta':
       self.names = gta_class_name
       self.focal_length = 935.3074360871937
@@ -439,6 +448,13 @@ gta_class_name = [
 pascal_class_name = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", 
   "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", 
   "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
+
+shangqi_class_name = [
+     'car', 'person', 'rider', 'truck', 'bus'
+]
+flir_class_name = [
+     'car', 'person', 'rider'
+]
 
 coco_class_name = [
      'person', 'bicycle', 'car', 'motorcycle', 'airplane',

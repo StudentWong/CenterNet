@@ -10,8 +10,8 @@ import os
 
 import torch.utils.data as data
 
-class ShangQi(data.Dataset):
-  num_classes = 5
+class FLIR(data.Dataset):
+  num_classes = 3
   default_resolution = [384, 384]
   mean = np.array([0.40789654, 0.44719302, 0.47026115],
                    dtype=np.float32).reshape(1, 1, 3)
@@ -19,8 +19,8 @@ class ShangQi(data.Dataset):
                    dtype=np.float32).reshape(1, 1, 3)
 
   def __init__(self, opt, split):
-    super(ShangQi, self).__init__()
-    self.data_dir = os.path.join(opt.data_dir, 'shangqi')
+    super(FLIR, self).__init__()
+    self.data_dir = os.path.join(opt.data_dir, 'FLIR_ADAS_1_3')
     self.img_dir = os.path.join(self.data_dir, '{}'.format(split))
     if split == 'test':
       self.annot_path = os.path.join(
@@ -37,9 +37,9 @@ class ShangQi(data.Dataset):
           '{}.json').format(split)
     self.max_objs = 64
     self.class_name = [
-      '__background__', 'car', 'person', 'rider', 'truck', 'bus']
+      '__background__', 'car', 'person', 'rider']
     self._valid_ids = [
-      1, 2, 3, 7, 8]
+      3, 1, 2]
 
 
     self.cat_ids = {v: i for i, v in enumerate(self._valid_ids)}

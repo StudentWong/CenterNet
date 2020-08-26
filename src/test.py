@@ -67,8 +67,11 @@ def prefetch_test(opt):
   time_stats = ['tot', 'load', 'pre', 'net', 'dec', 'post', 'merge']
   avg_time_stats = {t: AverageMeter() for t in time_stats}
   for ind, (img_id, pre_processed_images) in enumerate(data_loader):
+    # print(img_id)
+    # exit()
+    # time_begin = time()
     ret = detector.run(pre_processed_images)
-    results[img_id.numpy().astype(np.int32)[0]] = ret['results']
+    results[img_id.numpy().astype(np.int64)[0]] = ret['results']
     Bar.suffix = '[{0}/{1}]|Tot: {total:} |ETA: {eta:} '.format(
                    ind, num_iters, total=bar.elapsed_td, eta=bar.eta_td)
     for t in avg_time_stats:
@@ -94,11 +97,12 @@ def test(opt):
 
   results = {}
   num_iters = len(dataset)
-  bar = Bar('{}'.format(opt.exp_id), max=num_iters)
+  #bar = Bar('{}'.format(opt.exp_id), max=num_iters)
   time_stats = ['tot', 'load', 'pre', 'net', 'dec', 'post', 'merge']
   avg_time_stats = {t: AverageMeter() for t in time_stats}
   for ind in range(num_iters):
     img_id = dataset.images[ind]
+
     img_info = dataset.coco.loadImgs(ids=[img_id])[0]
     img_path = os.path.join(dataset.img_dir, img_info['file_name'])
 
@@ -109,18 +113,21 @@ def test(opt):
     
     results[img_id] = ret['results']
 
-    Bar.suffix = '[{0}/{1}]|Tot: {total:} |ETA: {eta:} '.format(
-                   ind, num_iters, total=bar.elapsed_td, eta=bar.eta_td)
+
+    #Bar.suffix = '[{0}/{1}]|Tot: {total:} |ETA: {eta:} '.format(
+    #               ind, num_iters, total=bar.elapsed_td, eta=bar.eta_td)
     for t in avg_time_stats:
       avg_time_stats[t].update(ret[t])
       Bar.suffix = Bar.suffix + '|{} {:.3f} '.format(t, avg_time_stats[t].avg)
-    bar.next()
-  bar.finish()
+    #bar.next()
+  #bar.finish()
   dataset.run_eval(results, opt.save_dir)
 
 if __name__ == '__main__':
   opt = opts().parse()
   if opt.not_prefetch_test:
+    # print('aaa')
     test(opt)
   else:
+    # print("aaa")
     prefetch_test(opt)

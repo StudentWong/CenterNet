@@ -55,6 +55,7 @@ class CTDetDataset(data.Dataset):
         h_border = self._get_border(128, img.shape[0])
         c[0] = np.random.randint(low=w_border, high=img.shape[1] - w_border)
         c[1] = np.random.randint(low=h_border, high=img.shape[0] - h_border)
+
       else:
         sf = self.opt.scale
         cf = self.opt.shift
