@@ -54,6 +54,10 @@ class Debugger(object):
       num_classes = 3
       self.names = flir_class_name
 
+    elif num_classes == 3 or dataset == 'shangqi3class':
+        num_classes = 3
+        self.names = flir_class_name
+
     elif dataset == 'gta':
       self.names = gta_class_name
       self.focal_length = 935.3074360871937

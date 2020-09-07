@@ -12,6 +12,7 @@ from .dataset.pascal import PascalVOC
 from .dataset.kitti import KITTI
 from .dataset.coco_hp import COCOHP
 from .dataset.shangqi import ShangQi
+from .dataset.shangqi_3cat import ShangQi3Cat
 from .dataset.FLIR import FLIR
 
 
@@ -21,7 +22,8 @@ dataset_factory = {
   'kitti': KITTI,
   'coco_hp': COCOHP,
   'shangqi': ShangQi,
-  'flir': FLIR
+  'flir': FLIR,
+  'shangqi3class': ShangQi3Cat,
 }
 
 _sample_factory = {

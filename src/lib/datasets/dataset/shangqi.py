@@ -13,9 +13,9 @@ import torch.utils.data as data
 class ShangQi(data.Dataset):
   num_classes = 5
   default_resolution = [384, 384]
-  mean = np.array([0.40789654, 0.44719302, 0.47026115],
+  mean = np.array([0.317200417, 0.317200417, 0.317200417],
                    dtype=np.float32).reshape(1, 1, 3)
-  std = np.array([0.28863828, 0.27408164, 0.27809835],
+  std = np.array([0.22074733, 0.22074733, 0.22074733],
                    dtype=np.float32).reshape(1, 1, 3)
 
   def __init__(self, opt, split):
@@ -113,28 +113,65 @@ class ShangQi(data.Dataset):
     coco_eval.accumulate()
     coco_eval.summarize()
 
+def shangqi_cal_mean_and_std(train_data_dir='/home/studentw/disk3/tracker/CenterNet/data/shangqi/train', val_data_dir=None):
+  train_list = sorted(os.listdir(train_data_dir))
+  all_img=[]
+  for img_name in train_list:
+    all_img = all_img + [os.path.join(train_data_dir, img_name)]
+  if not val_data_dir is None:
+    val_list = sorted(os.listdir(val_data_dir))
+    for img_name in val_list:
+      all_img = all_img + [os.path.join(val_data_dir, img_name)]
 
-# import json
-# import cv2
-# import os
-# if __name__ == '__main__':
-#   shangqi_coco = coco.COCO('/home/studentw/disk3/tracker/CenterNet/data/shangqi/annotations/val.json')
-#   shangqi_coco_dets = shangqi_coco.loadRes('/home/studentw/disk3/tracker/CenterNet/exp/ctdet/default/results.json')
+  R_channel_mean = 0
+  G_channel_mean = 0
+  B_channel_mean = 0
+  width=None
+  height=None
+  for img_path in all_img:
+    img = cv2.imread(img_path)/255.0
+    if width is None:
+      width = img.shape[0]
+    else:
+      assert width == img.shape[0], 'img shape error'
+    if height is None:
+      height = img.shape[1]
+    else:
+      assert height == img.shape[1], 'img shape error'
+    R_channel_mean = R_channel_mean + np.sum(img[:, :, 0])
+    G_channel_mean = G_channel_mean + np.sum(img[:, :, 1])
+    B_channel_mean = B_channel_mean + np.sum(img[:, :, 2])
 
-  # print(shangqi_coco_dets[imgids[0]])
-  # coco_eval = COCOeval(shangqi_coco, shangqi_coco_dets, "bbox")
-  # coco_eval.params.catIds = [
-  #     8]
-  # coco_eval.evaluate()
-  # coco_eval.accumulate()
-  # coco_eval.summarize()
+  num = len(all_img) * width * height  # 这里（512,512）是每幅图片的大小，所有图片尺寸都一样
+  R_mean = R_channel_mean / num
+  G_mean = G_channel_mean / num
+  B_mean = B_channel_mean / num
 
+  print(R_mean)
+  print(G_mean)
+  print(B_mean)
 
+  R_channel_std = 0
+  G_channel_std = 0
+  B_channel_std = 0
+  for img_path in all_img:
+    img = cv2.imread(img_path)/255.0
+    R_channel_std = R_channel_std + np.sum((img[:, :, 0] - R_mean) ** 2)
+    G_channel_std = G_channel_std + np.sum((img[:, :, 1] - G_mean) ** 2)
+    B_channel_std = B_channel_std + np.sum((img[:, :, 2] - B_mean) ** 2)
 
-import json
-import cv2
-import os
-if __name__ == '__main__':
+  R_std = np.sqrt(R_channel_std / num)
+  G_std = np.sqrt(G_channel_std / num)
+  B_std = np.sqrt(B_channel_std / num)
+  print(R_std)
+  print(G_std)
+  print(B_std)
+
+    # print(type(img))
+
+  # print(img_list)
+
+def save_rect_img():
   shangqi_coco = coco.COCO('/home/studentw/disk3/tracker/CenterNet/data/shangqi/annotations/val.json')
   shangqi_coco_dets = shangqi_coco.loadRes('/home/studentw/disk3/tracker/CenterNet/exp/ctdet/default/results.json')
 
@@ -180,3 +217,21 @@ if __name__ == '__main__':
     # print(len(targets))
   # result
   # print(imgids)
+
+def eval_result():
+  shangqi_coco = coco.COCO('/home/studentw/disk3/tracker/CenterNet/data/shangqi/annotations/val.json')
+  shangqi_coco_dets = shangqi_coco.loadRes('/home/studentw/disk3/tracker/CenterNet/exp/ctdet/default/results.json')
+
+  # print(shangqi_coco_dets[imgids[0]])
+  coco_eval = COCOeval(shangqi_coco, shangqi_coco_dets, "bbox")
+  coco_eval.params.catIds = [8]
+  coco_eval.evaluate()
+  coco_eval.accumulate()
+  coco_eval.summarize()
+
+
+import json
+import cv2
+import os
+if __name__ == '__main__':
+  shangqi_cal_mean_and_std()
