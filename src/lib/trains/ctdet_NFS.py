@@ -107,7 +107,7 @@ class CtdetTrainer_NFS(BaseTrainer):
     # exit()
   
   def _get_losses(self, opt):
-    loss_states = ['loss', 'hm_loss', 'wh_loss', 'off_loss']
+    loss_states = ['loss', 'hm_loss', 'wh_loss', 'off_loss', 'center_loss']
     loss = CtdetLoss_NFS(opt)
     return loss_states, loss
 

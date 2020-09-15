@@ -462,11 +462,14 @@ class DLASeg_no_bias(nn.Module):
               if 'hm' in head:
                 fc = nn.Sequential(
                       nn.Conv2d(channels[self.first_level], head_conv,
-                                kernel_size=3, padding=1, bias=True),
-                      nn.ReLU(inplace=True),
-                      nn.Conv2d(head_conv, head_conv,
-                                kernel_size=final_kernel, stride=1,
-                                padding=final_kernel // 2, bias=True))
+                                kernel_size=3, padding=1, bias=True))
+                # fc = nn.Sequential(
+                #           nn.Conv2d(channels[self.first_level], head_conv,
+                #                     kernel_size=3, padding=1, bias=True),
+                #           nn.ReLU(inplace=True),
+                #           nn.Conv2d(head_conv, head_conv,
+                #                     kernel_size=final_kernel, stride=1,
+                #                     padding=final_kernel // 2, bias=True))
                 fc[-1].bias.data.fill_(0.0)
               else:
                 fc = nn.Sequential(
