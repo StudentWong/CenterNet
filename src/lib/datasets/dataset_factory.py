@@ -29,6 +29,7 @@ dataset_factory = {
 _sample_factory = {
   'exdet': EXDetDataset,
   'ctdet': CTDetDataset,
+  'ctdetnfs': CTDetDataset,
   'ddd': DddDataset,
   'multi_pose': MultiPoseDataset
 }

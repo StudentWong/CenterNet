@@ -10,12 +10,17 @@ from __future__ import print_function
 
 import torch
 import torch.nn as nn
-from .utils import _transpose_and_gather_feat
+try:
+    from .utils import _transpose_and_gather_feat
+except:
+    from src.lib.models.utils import _transpose_and_gather_feat
 import torch.nn.functional as F
 
+min_clip = 1e-6
 
 def _slow_neg_loss(pred, gt):
   '''focal loss from CornerNet'''
+
   pos_inds = gt.eq(1)
   neg_inds = gt.lt(1)
 
@@ -46,6 +51,13 @@ def _neg_loss(pred, gt):
       pred (batch x c x h x w)
       gt_regr (batch x c x h x w)
   '''
+  # print(pred)
+  # print(gt)
+  # print(pred.max())
+  # print(gt.max())
+  # print(pred.shape)
+  # print(gt.shape)
+  # exit()
   pos_inds = gt.eq(1).float()
   neg_inds = gt.lt(1).float()
 
@@ -56,9 +68,19 @@ def _neg_loss(pred, gt):
   pos_loss = torch.log(pred) * torch.pow(1 - pred, 2) * pos_inds
   neg_loss = torch.log(1 - pred) * torch.pow(pred, 2) * neg_weights * neg_inds
 
+  # print(torch.log(pred) * torch.pow(1 - pred, 2))
+  # print(pos_loss.max())
+  # print(pos_loss.min())
+  # exit()
+
   num_pos  = pos_inds.float().sum()
   pos_loss = pos_loss.sum()
   neg_loss = neg_loss.sum()
+
+  # print(num_pos)
+  # print(pos_loss)
+  # print(neg_loss)
+  # exit()
 
   if num_pos == 0:
     loss = loss - neg_loss
@@ -110,6 +132,92 @@ def _reg_loss(regr, gt_regr, mask):
   regr_loss = nn.functional.smooth_l1_loss(regr, gt_regr, size_average=False)
   regr_loss = regr_loss / (num + 1e-4)
   return regr_loss
+
+
+def distance_no_sqrt(x, y, dim=-1, keepdim=False):
+    assert x.shape == y.shape
+    shapelen = len(x.shape)
+    assert dim < shapelen
+    return ((x - y)**2).sum(dim=dim, keepdim=keepdim)
+
+class _menbership_center_loss(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x, c, actviate):
+        # x: N*D*(w*h)
+        # c: D*C
+        # activate: N*C*(w*h)
+
+        # hidden: N*D*C*(w*h)
+
+        assert x.shape[0] == actviate.shape[0] and len(x.shape) == 3
+        N = x.shape[0]
+        assert x.shape[1] == c.shape[0] and len(c.shape) == 2
+        D = x.shape[1]
+        assert c.shape[1] == actviate.shape[1]
+        C = c.shape[1]
+        assert len(actviate.shape) == 3 and x.shape[2] == actviate.shape[2]
+        wh = x.shape[2]
+
+        x_expand = x.unsqueeze(2).expand([N, D, C, wh])
+        c_expand = c.unsqueeze(0).unsqueeze(3).expand([N, D, C, wh])
+        actviate_expand = actviate.unsqueeze(1).expand([N, D, C, wh])
+        distance = distance_no_sqrt(x_expand, c_expand, dim=1)
+        ctx.save_for_backward(x_expand.detach(), c_expand.detach(), actviate_expand.detach(), distance.detach())
+        #distance shape: N*C*(w*h)
+        assert distance.shape[0] == N \
+               and distance.shape[1] == C \
+               and distance.shape[2] == wh \
+               and actviate.shape[0] == N \
+               and actviate.shape[1] == C \
+               and actviate.shape[2] == wh
+
+        loss_N_C_wh = distance * actviate
+        loss = loss_N_C_wh.sum()
+        return loss.clamp(min=min_clip)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        # x: N*D*(w*h)
+        # c: D*C
+        # activate: N*C*(w*h)
+
+        # hidden: N*D*C*(w*h)
+
+        # x_expand: N*D*C*(w*h)
+        # c_expand: N*D*C*(w*h)
+        # actviate_expand: N*D*C*(w*h)
+        # distance: N*C*(w*h)
+        x_expand, c_expand, actviate_expand, distance = ctx.saved_variables
+
+        grad_x = grad_c = grad_activate = None
+
+        if ctx.needs_input_grad[0]:
+            grad_x_this_layer = (2 * (x_expand - c_expand) * actviate_expand).sum(dim=2)
+            grad_x = grad_x_this_layer * grad_output
+
+        if ctx.needs_input_grad[1]:
+            grad_c_this_layer = ((2 * (c_expand - x_expand) * actviate_expand).sum(dim=(0, 3))) \
+                                / actviate_expand.sum(dim=(0, 3))
+            grad_c = grad_c_this_layer * grad_output
+        if ctx.needs_input_grad[2]:
+            grad_activate_this_layer = distance
+            grad_activate = grad_activate_this_layer * grad_output
+
+        return grad_x, grad_c, grad_activate
+
+
+
+
+#
+class CenterLoss(nn.Module):
+  '''nn.Module warpper for focal loss'''
+  def __init__(self):
+    super(CenterLoss, self).__init__()
+    self.center_loss = _menbership_center_loss
+
+  def forward(self, x, c, act):
+    return self.center_loss.apply(x, c, act)
+
 
 class FocalLoss(nn.Module):
   '''nn.Module warpper for focal loss'''
@@ -235,3 +343,12 @@ def compute_rot_loss(output, target_bin, target_res, mask):
           valid_output2[:, 7], torch.cos(valid_target_res2[:, 1]))
         loss_res += loss_sin2 + loss_cos2
     return loss_bin1 + loss_bin2 + loss_res
+
+# if __name__ == '__main__':
+#     a = torch.tensor([[[0, 1, 1], [1, 0, 1]], [[1, 1, 1], [0, 0, 1]],
+#                       [[-1, -1, 1], [-1, 0, 1]]], dtype=torch.float, requires_grad=True)
+#     b = -a.clone()
+#     print(a.shape)
+#     # exit()
+#     print(distance_no_sqrt(a, b, dim=1))
+#     print(distance_no_sqrt(a, b, dim=1).shape)

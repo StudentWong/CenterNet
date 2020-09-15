@@ -13,6 +13,15 @@ from torch import nn
 import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 
+try:
+    from .DCNv2.dcn_v2 import DCN
+except:
+    pass
+try:
+    from ..membership import Membership_Activation, Membership_norm
+except:
+    pass
+
 
 BN_MOMENTUM = 0.1
 logger = logging.getLogger(__name__)
@@ -392,11 +401,6 @@ class DLAUp(nn.Module):
     def __init__(self, startp, channels, scales, in_channels=None):
         super(DLAUp, self).__init__()
         self.startp = startp
-        # print('DLAUP_startp: ')
-        # print(self.startp)
-        # print('DLAUP_channels: ')
-        # print(channels)
-
         if in_channels is None:
             in_channels = channels
         self.channels = channels
@@ -404,10 +408,6 @@ class DLAUp(nn.Module):
         scales = np.array(scales, dtype=int)
         for i in range(len(channels) - 1):
             j = -i - 2
-            # print(i)
-            # print(j)
-            # print(in_channels[j:])
-            # print(scales[j:] // scales[j])
             setattr(self, 'ida_{}'.format(i),
                     IDAUp(channels[j], in_channels[j:],
                           scales[j:] // scales[j]))
@@ -419,7 +419,6 @@ class DLAUp(nn.Module):
         for i in range(len(layers) - self.startp - 1):
             ida = getattr(self, 'ida_{}'.format(i))
             ida(layers, len(layers) -i - 2, len(layers))
-            # print(len(layers))
             out.insert(0, layers[-1])
         return out
 
@@ -435,15 +434,15 @@ class Interpolate(nn.Module):
         return x
 
 
-class DLASeg(nn.Module):
+class DLASeg_no_bias(nn.Module):
     def __init__(self, base_name, heads, pretrained, down_ratio, final_kernel,
                  last_level, head_conv, out_channel=0):
-        super(DLASeg, self).__init__()
+        super(DLASeg_no_bias, self).__init__()
         assert down_ratio in [2, 4, 8, 16]
         self.first_level = int(np.log2(down_ratio))
         self.last_level = last_level
         # print(pretrained)
-        self.base = dla34(pretrained=pretrained)
+        self.base = globals()[base_name](pretrained=pretrained)
         #base = dla34(pretrained=pretrained)
         channels = self.base.channels
         scales = [2 ** i for i in range(len(channels[self.first_level:]))]
@@ -452,8 +451,6 @@ class DLASeg(nn.Module):
         if out_channel == 0:
             out_channel = channels[self.first_level]
 
-        # print(out_channel)
-        # print(channels[self.first_level:self.last_level])
         self.ida_up = IDAUp(out_channel, channels[self.first_level:self.last_level], 
                             [2 ** i for i in range(self.last_level - self.first_level)])
         
@@ -461,66 +458,95 @@ class DLASeg(nn.Module):
         for head in self.heads:
             classes = self.heads[head]
             if head_conv > 0:
-              fc = nn.Sequential(
-                  nn.Conv2d(channels[self.first_level], head_conv,
-                    kernel_size=3, padding=1, bias=True),
-                  nn.ReLU(inplace=True),
-                  nn.Conv2d(head_conv, classes, 
-                    kernel_size=final_kernel, stride=1, 
-                    padding=final_kernel // 2, bias=True))
+
               if 'hm' in head:
-                fc[-1].bias.data.fill_(-2.19)
+                fc = nn.Sequential(
+                      nn.Conv2d(channels[self.first_level], head_conv,
+                                kernel_size=3, padding=1, bias=True),
+                      nn.ReLU(inplace=True),
+                      nn.Conv2d(head_conv, head_conv,
+                                kernel_size=final_kernel, stride=1,
+                                padding=final_kernel // 2, bias=True))
+                fc[-1].bias.data.fill_(0.0)
               else:
+                fc = nn.Sequential(
+                      nn.Conv2d(channels[self.first_level], head_conv,
+                                kernel_size=3, padding=1, bias=True),
+                      nn.ReLU(inplace=True),
+                      nn.Conv2d(head_conv, classes,
+                                kernel_size=final_kernel, stride=1,
+                                padding=final_kernel // 2, bias=True))
                 fill_fc_weights(fc)
             else:
-              fc = nn.Conv2d(channels[self.first_level], classes, 
-                  kernel_size=final_kernel, stride=1, 
+              # fc = nn.Conv2d(channels[self.first_level], classes,
+              #     kernel_size=final_kernel, stride=1,
+              #     padding=final_kernel // 2, bias=True)
+              fc = nn.Conv2d(channels[self.first_level], head_conv,
+                  kernel_size=final_kernel, stride=1,
                   padding=final_kernel // 2, bias=True)
               if 'hm' in head:
-                fc.bias.data.fill_(-2.19)
+                fc.bias.data.fill_(0.0)
               else:
                 fill_fc_weights(fc)
-
-            if head == 'hm':
-                print(fc)
-                print(head_conv)
-
             self.__setattr__(head, fc)
 
+
+        # c1 = [2.0, -5.0, -3.5, -6.0, -3.0]
+        # lamda1 = [2.0, 3.0, 2.5, 6.0, 4.0]
+        # c2 = [-5.0, 1.5, -2.5, -6.0, -5.0]
+        # lamda2 = [3.0, 1.5, 3.5, 3.0, 2.0]
+        # c3 = [-4.0, -3.5, 0.0, -6.0, -5.0]
+        # lamda3 = [4.0, 3.5, 2.0, 4.0, 3.0]
+        # c4 = [-3.5, -4.5, -5.0, 1.0, -3.5]
+        # lamda4 = [3.5, 3.5, 2.0, 3.0, 3.5]
+        # c5 = [-4.5, -6.5, -4.5, -5.0, 1.0]
+        # lamda5 = [3.5, 3.5, 3.5, 5.0, 3.0]
+
+
+        # c = [c1, c2, c3, c4, c5]
+        # lamda = [lamda1, lamda2, lamda3, lamda4, lamda5]
+
+
+        # init_c = torch.tensor(np.array(c), dtype=torch.float)
+        # init_lamda = torch.tensor(np.array(lamda), dtype=torch.float)
+
+        # self.menber_activation = Membership_Activation(5, 5,
+        #                                                init_c=init_c,
+        #                                                init_lamda=init_lamda)
+
+        # self.menber_activation = Membership_norm(5, 5,
+        #                                          init_c=init_c/1,
+        #                                          init_lamda=init_lamda/1)
+        self.menber_activation = Membership_norm(head_conv, 5)
+
     def forward(self, x):
-        # print(x.shape)
         x = self.base(x)
-        # for xx in x:
-        #     print(xx.shape)
-        # print(len(x))
         x = self.dla_up(x)
-
-        # for xx in x:
-        #     print(xx.shape)
-
-        # print('ALL_first_level:')
-        # print(self.first_level)
-        # print('ALL_last_level:')
-        # print(self.last_level)
-
 
         y = []
         for i in range(self.last_level - self.first_level):
             y.append(x[i].clone())
         self.ida_up(y, 0, len(y))
 
-        # for yy in y:
-        #     print(yy.shape)
-
         z = {}
-        # print(self.heads)
         for head in self.heads:
-            z[head] = self.__getattr__(head)(y[-1])
+
+            if head == 'hm':
+                # print(z[head])
+                z['ft'] = self.__getattr__(head)(y[-1])
+                origin_shape = z['ft'].shape
+                z[head] = self.menber_activation(
+                    z['ft'].view(origin_shape[0], origin_shape[1], origin_shape[2]*origin_shape[3])
+                ).view(origin_shape[0], 5, origin_shape[2], origin_shape[3])
+                # print(z[head])
+                z['center'] = self.menber_activation.c
+            else:
+                z[head] = self.__getattr__(head)(y[-1])
         return [z]
     
 
-def get_pose_net(num_layers, heads, head_conv=256, down_ratio=4):
-  model = DLASeg('dla{}'.format(num_layers), heads,
+def get_pose_net_no_bias(num_layers, heads, head_conv=256, down_ratio=4):
+  model = DLASeg_no_bias('dla{}'.format(num_layers), heads,
                  pretrained=True,
                  down_ratio=down_ratio,
                  final_kernel=1,
@@ -528,69 +554,205 @@ def get_pose_net(num_layers, heads, head_conv=256, down_ratio=4):
                  head_conv=head_conv)
   return model
 
+# import cv2
+# if __name__ == '__main__':
+#     from src.lib.models.networks.DCNv2.dcn_v2 import DCN
+#     #num_layers: 34
+#     #heads: {'hm': 5, 'wh': 2, 'reg': 2}
+#     #head_conv: 256
+#     model = get_pose_net_no_bias(num_layers=34, heads={'hm': 5, 'wh': 2, 'reg': 2},
+#                                  head_conv=256)
+#     # print(model)
+#     ckpt = torch.load('/home/studentw/disk3/tracker/CenterNet/exp/ctdet/default/model_best_shangqi.pth')
+#     # print(ckpt['state_dict'].keys())
+#     model.load_state_dict(ckpt['state_dict'])
+#     model = model.cuda()
+#
+#     mean = np.array([0.40789654, 0.44719302, 0.47026115],
+#                     dtype=np.float32).reshape(1, 1, 3)
+#     std = np.array([0.28863828, 0.27408164, 0.27809835],
+#                    dtype=np.float32).reshape(1, 1, 3)
+#
+#     img = cv2.imread('/home/studentw/disk3/shangqi/train/200420000000.png')/255.0
+#
+#
+#     inp = (img - mean) / std
+#     inp = inp.transpose(2, 0, 1)
+#
+#     # print(img-mean)
+#     input = torch.tensor(inp, dtype=torch.float).unsqueeze(0).cuda()
+#     y = model(input)
+#     # print(y[0].keys())
+#     print(np.max(y[0]['hm'][0][0:1].sigmoid().permute(1, 2, 0).detach().cpu().numpy()))
+#     print(np.min(y[0]['hm'][0][0:1].sigmoid().permute(1, 2, 0).detach().cpu().numpy()))
+#
+#     print(np.max(y[0]['hm'][0][0:1].permute(1, 2, 0).detach().cpu().numpy()))
+#     print(np.min(y[0]['hm'][0][0:1].permute(1, 2, 0).detach().cpu().numpy()))
+#     cv2.imshow('1', y[0]['hm'][0][0:1].permute(1, 2, 0).detach().cpu().numpy())
+#     cv2.waitKey(0)
 
 
-def gaussian_radius(det_size, min_overlap=0.7):
-  height, width = det_size
+def save_features_output():
+    import cv2
+    from pycocotools import coco
+    from src.lib.models.decode import ctdet_decode_ret_peak
 
-  a1  = 1
-  b1  = (height + width)
-  c1  = width * height * (1 - min_overlap) / (1 + min_overlap)
-  sq1 = np.sqrt(b1 ** 2 - 4 * a1 * c1)
-  r1  = (b1 + sq1) / 2
-
-  a2  = 4
-  b2  = 2 * (height + width)
-  c2  = (1 - min_overlap) * width * height
-  sq2 = np.sqrt(b2 ** 2 - 4 * a2 * c2)
-  r2  = (b2 + sq2) / 2
-
-  a3  = 4 * min_overlap
-  b3  = -2 * min_overlap * (height + width)
-  c3  = (min_overlap - 1) * width * height
-  sq3 = np.sqrt(b3 ** 2 - 4 * a3 * c3)
-  r3  = (b3 + sq3) / 2
-  return min(r1, r2, r3)
-
-
-import cv2
-if __name__ == '__main__':
-    from src.lib.models.networks.DCNv2.dcn_v2 import DCN
-    #num_layers: 34
-    #heads: {'hm': 5, 'wh': 2, 'reg': 2}
-    #head_conv: 256
-    model = DLASeg(base_name='dla34', heads={'hm': 3, 'wh': 2, 'reg': 2},
-                   pretrained=True,
-                   down_ratio=4,
-                   final_kernel=1,
-                   last_level=5,
-                   head_conv=256)
+    # num_layers: 34
+    # heads: {'hm': 5, 'wh': 2, 'reg': 2}
+    # head_conv: 256
+    model = get_pose_net_no_bias(num_layers=34, heads={'hm': 5, 'wh': 2, 'reg': 2},
+                                 head_conv=256)
     # print(model)
-    ckpt = torch.load('/home/studentw/disk3/tracker/CenterNet/exp/ctdet/default/model_best_flir.pth')
+    ckpt = torch.load('/home/studentw/disk3/tracker/CenterNet/exp/ctdet/default/model_best_shangqi.pth')
     # print(ckpt['state_dict'].keys())
     model.load_state_dict(ckpt['state_dict'])
     model = model.cuda()
 
-    #input = torch.rand((5, 3, 384, 384), dtype=torch.float).cuda()
-    img = cv2.imread('/home/studentw/disk3/shangqi/test_jpg/200521002252.jpg')/255.0
-    # input = torch.tensor(img)
     mean = np.array([0.40789654, 0.44719302, 0.47026115],
                     dtype=np.float32).reshape(1, 1, 3)
     std = np.array([0.28863828, 0.27408164, 0.27809835],
                    dtype=np.float32).reshape(1, 1, 3)
-    inp = (img - mean) / std
-    inp = inp.transpose(2, 0, 1)
 
-    # print(img-mean)
-    input = torch.tensor(inp, dtype=torch.float).unsqueeze(0).cuda()
-    y = model(input)
-    # print(y[0].keys())
-    print(np.max(y[0]['hm'][0][0:1].permute(1, 2, 0).detach().cpu().numpy()))
-    print(np.min(y[0]['hm'][0][0:1].permute(1, 2, 0).detach().cpu().numpy()))
-    cv2.imshow('1', y[0]['hm'][0][0:1].permute(1, 2, 0).detach().cpu().numpy())
-    cv2.waitKey(0)
-    # print(y[0]['hm'][0][0:1].permute(1, 2, 0))
-    # print(y[0]['wh'].shape)
-    # print(y[0]['reg'].shape)
+    all_img = []
+
+    train_data_dir = '/home/studentw/disk3/tracker/CenterNet/data/shangqi/train'
+    train_list = sorted(os.listdir(train_data_dir))
+    train_num = len(train_list)
+    for img_name in train_list:
+        all_img = all_img + [os.path.join(train_data_dir, img_name)]
+
+    val_data_dir = '/home/studentw/disk3/tracker/CenterNet/data/shangqi/val'
+    val_list = sorted(os.listdir(val_data_dir))
+    val_num = len(val_list)
+    for img_name in val_list:
+        all_img = all_img + [os.path.join(val_data_dir, img_name)]
+
+    label_train = coco.COCO('/home/studentw/disk3/tracker/CenterNet/data/shangqi/annotations/train.json')
+    label_val = coco.COCO('/home/studentw/disk3/tracker/CenterNet/data/shangqi/annotations/val.json')
+
+    mapping_ids = [1, 2, 3, 7, 8]
+    invert_mapping = {1: 0, 2: 1, 3: 2, 7: 3, 8: 4}
+    output_file = []
+    feature_res = []
+    for clsnum in range(0, 5):
+        file_name = '/home/studentw/disk3/tracker/CenterNet/data/shangqi/feature_out{:d}.npy'.format(clsnum)
+        if not os.path.exists(file_name):
+            os.mknod(file_name)
+        output_file = output_file + [file_name]
+        feature_res = feature_res + [[]]
+    # print(feature_res)
+
+    all_num = len(all_img)
+
+    for i, img_path in enumerate(all_img):
+        imgnum_in_json = int(img_path.split('/')[-1].replace('.png', ''))
+        # print(imgnum_in_json)
+        # exit()
+        if i <= train_num-1:
+            label_id = label_train.getAnnIds(imgIds=[imgnum_in_json])
+            # print(label_id)
+            labels = [label_train.anns[label_id_single] for label_id_single in label_id]
+            # print(labels)
+        else:
+            label_id = label_val.getAnnIds(imgIds=[imgnum_in_json])
+            labels = [label_val.anns[label_id_single] for label_id_single in label_id]
+
+        img = cv2.imread(img_path) / 255.0
+
+        inp = (img - mean) / std
+        inp = inp.transpose(2, 0, 1)
+
+        # print(img-mean)
+        input = torch.tensor(inp, dtype=torch.float).unsqueeze(0).cuda()
+        y = model(input)[-1]
+
+        # print(np.max(y['reg'][0][:].permute(1, 2, 0).detach().cpu().numpy()))
+        # exit()
+        dets, xs, ys = ctdet_decode_ret_peak(y['hm'], y['wh'], reg=y['reg'], cat_spec_wh=False, K=20)
+        det_box_tlxywh = dets[0, :, 0:4].detach().cpu().numpy() * 4
+
+        det_box_cwh = det_box_tlxywh.copy()
+        det_box_cwh[:, 2:4] = det_box_tlxywh[:, 2:4] - det_box_tlxywh[:, 0:2]
+        det_box_cwh[:, 0:2] = det_box_tlxywh[:, 0:2] + 0.5*det_box_cwh[:, 2:4]
+
+        # print(det_box_cwh)
+        # print(xs)
+        # print(ys)
+        # print(dets)
+        # exit()
+        for label in labels:
+            for detnum, det in enumerate(det_box_cwh):
+                # print(det)
+                lab_cwh = np.array(label['bbox'], dtype=np.float)
+                lab_cwh[2:4] = np.array(label['bbox'][2:4])
+                lab_cwh[0:2] = np.array(label['bbox'][0:2]) + 0.5*lab_cwh[2:4]
+                # print(lab_cwh)
+                distance_xy = (lab_cwh[0:2]-det[0:2]) ** 2
+                if np.sqrt(distance_xy[0]+distance_xy[1])<2:
+                    if mapping_ids[int(dets[0][detnum][5])] == label['category_id']:
+                        feature_res[int(dets[0][detnum][5])] = \
+                            feature_res[int(dets[0][detnum][5])] + \
+                            [y['hm'][0, :, int(ys[0][detnum]), int(xs[0][detnum])].detach().cpu().numpy().tolist() + [label['area']]]
+
+                    else:
+                        if label['category_id'] == 1 or \
+                                label['category_id'] == 2 or \
+                                label['category_id'] == 3 or \
+                                label['category_id'] == 7 or \
+                                label['category_id'] == 8:
+
+                            feature_res[invert_mapping[label['category_id']]] = \
+                                feature_res[invert_mapping[label['category_id']]] + \
+                                [y['hm'][0, :, int(ys[0][detnum]), int(xs[0][detnum])].detach().cpu().numpy().tolist() + [
+                                    label['area']]]
+
+                        # print(feature_res[int(dets[0][detnum][5])])
+                        # exit()
+                        # print(xs[detnum])
+                        # print(y['hm'].shape)
+                        # print(y['hm'][0, int(dets[0][detnum][5]), int(ys[0][detnum]), int(xs[0][detnum])])
+                        # print(y['hm'][0, :, int(ys[0][detnum]), int(xs[0][detnum])])
+
+                        # print(dets[0][detnum])
+                        # print(lab_cwh)
+                        # print(int(dets[0][detnum][5]))
+        if i %10 == 0:
+            print('{:d} of {:d}'.format(i, all_num))
+
+    for clsnum in range(0, 5):
+        arr = np.array(feature_res[clsnum])
+        print(arr.shape)
+        np.save(output_file[clsnum], np.array(feature_res[clsnum]))
+
+
+# from src.lib.models.networks.DCNv2.dcn_v2 import DCN
+# if __name__ == '__main__':
+#     class_feature0 = np.load('/home/studentw/disk3/tracker/CenterNet/data/shangqi/feature_out0.npy')
+#     class_feature1 = np.load('/home/studentw/disk3/tracker/CenterNet/data/shangqi/feature_out1.npy')
+#     class_feature2 = np.load('/home/studentw/disk3/tracker/CenterNet/data/shangqi/feature_out2.npy')
+#     class_feature3 = np.load('/home/studentw/disk3/tracker/CenterNet/data/shangqi/feature_out3.npy')
+#     class_feature4 = np.load('/home/studentw/disk3/tracker/CenterNet/data/shangqi/feature_out4.npy')
+#     import matplotlib.pyplot as plt
+#     class_feature = [class_feature0, class_feature1, class_feature2, class_feature3, class_feature4]
+#     color = ['red', 'blue', 'green', 'yellow', 'hotpink']
+#
+#     for i in range(0, 5):
+#         figure = plt.figure(i)
+#         for j in range(0, 5):
+#             x = np.sqrt(class_feature[j][:, 5])
+#             y = class_feature[j][:, i]
+#             plt.scatter(x, y, c=color[j], s=8, label=j, alpha=0.6, edgecolors='gray', linewidths=0.5)
+#         plt.show()
+
+
+# if __name__ == '__main__':
+#     from src.lib.models.membership import Membership_Activation
+#     from src.lib.models.networks.DCNv2.dcn_v2 import DCN
+#     model = get_pose_net_no_bias(num_layers=34, heads={'hm': 5, 'wh': 2, 'reg': 2},
+#                                  head_conv=256)
+
+
+
+
 
 

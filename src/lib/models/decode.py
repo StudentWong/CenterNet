@@ -469,8 +469,12 @@ def ctdet_decode(heat, wh, reg=None, cat_spec_wh=False, K=100):
     heat = _nms(heat)
       
     scores, inds, clses, ys, xs = _topk(heat, K=K)
+    # print(ys)
+    # print(xs)
+    # print(reg.view(1, 2, -1)[:, :, inds])
     if reg is not None:
       reg = _transpose_and_gather_feat(reg, inds)
+      # print(reg)
       reg = reg.view(batch, K, 2)
       xs = xs.view(batch, K, 1) + reg[:, :, 0:1]
       ys = ys.view(batch, K, 1) + reg[:, :, 1:2]
@@ -493,6 +497,46 @@ def ctdet_decode(heat, wh, reg=None, cat_spec_wh=False, K=100):
     detections = torch.cat([bboxes, scores, clses], dim=2)
       
     return detections
+
+
+def ctdet_decode_ret_peak(heat, wh, reg=None, cat_spec_wh=False, K=100):
+    batch, cat, height, width = heat.size()
+
+    # heat = torch.sigmoid(heat)
+    # perform nms on heatmaps
+    heat = _nms(heat)
+
+    scores, inds, clses, ys, xs = _topk(heat, K=K)
+    ys_p = ys.clone()
+    xs_p = xs.clone()
+    # print(ys)
+    # print(xs)
+    # print(reg.view(1, 2, -1)[:, :, inds])
+    if reg is not None:
+        reg = _transpose_and_gather_feat(reg, inds)
+        # print(reg)
+        reg = reg.view(batch, K, 2)
+        xs = xs.view(batch, K, 1) + reg[:, :, 0:1]
+        ys = ys.view(batch, K, 1) + reg[:, :, 1:2]
+    else:
+        xs = xs.view(batch, K, 1) + 0.5
+        ys = ys.view(batch, K, 1) + 0.5
+    wh = _transpose_and_gather_feat(wh, inds)
+    if cat_spec_wh:
+        wh = wh.view(batch, K, cat, 2)
+        clses_ind = clses.view(batch, K, 1, 1).expand(batch, K, 1, 2).long()
+        wh = wh.gather(2, clses_ind).view(batch, K, 2)
+    else:
+        wh = wh.view(batch, K, 2)
+    clses = clses.view(batch, K, 1).float()
+    scores = scores.view(batch, K, 1)
+    bboxes = torch.cat([xs - wh[..., 0:1] / 2,
+                        ys - wh[..., 1:2] / 2,
+                        xs + wh[..., 0:1] / 2,
+                        ys + wh[..., 1:2] / 2], dim=2)
+    detections = torch.cat([bboxes, scores, clses], dim=2)
+
+    return detections, xs_p, ys_p
 
 def multi_pose_decode(
     heat, wh, kps, reg=None, hm_hp=None, hp_offset=None, K=100):

@@ -10,6 +10,7 @@ import os
 from .networks.msra_resnet import get_pose_net
 from .networks.dlav0 import get_pose_net as get_dlav0
 from .networks.pose_dla_dcn import get_pose_net as get_dla_dcn
+from .networks.pose_dla_dcn_no_bias import get_pose_net_no_bias as get_dla_dcn_no_bias
 from .networks.resnet_dcn import get_pose_net as get_pose_net_dcn
 from .networks.large_hourglass import get_large_hourglass_net
 
@@ -17,6 +18,7 @@ _model_factory = {
   'res': get_pose_net, # default Resnet with deconv
   'dlav0': get_dlav0, # default DLAup
   'dla': get_dla_dcn,
+  'dlaNoBias': get_dla_dcn_no_bias,
   'resdcn': get_pose_net_dcn,
   'hourglass': get_large_hourglass_net,
 }
