@@ -464,10 +464,17 @@ class DLASeg_no_bias(nn.Module):
                       nn.Conv2d(channels[self.first_level], head_conv,
                                 kernel_size=3, padding=1, bias=True))
                 # fc = nn.Sequential(
+                #     nn.Conv2d(channels[self.first_level], head_conv,
+                #               kernel_size=3, padding=1, bias=True),
+                #     nn.ReLU(inplace=True),
+                #     nn.Conv2d(head_conv, head_conv,
+                #               kernel_size=final_kernel, stride=1,
+                #               padding=final_kernel // 2, bias=True))
+                # fc = nn.Sequential(
                 #           nn.Conv2d(channels[self.first_level], head_conv,
                 #                     kernel_size=3, padding=1, bias=True),
                 #           nn.ReLU(inplace=True),
-                #           nn.Conv2d(head_conv, head_conv,
+                #           nn.Conv2d(head_conv, classes,
                 #                     kernel_size=final_kernel, stride=1,
                 #                     padding=final_kernel // 2, bias=True))
                 fc[-1].bias.data.fill_(0.0)
@@ -521,6 +528,7 @@ class DLASeg_no_bias(nn.Module):
         #                                          init_c=init_c/1,
         #                                          init_lamda=init_lamda/1)
         self.menber_activation = Membership_norm(head_conv, 5)
+        # self.menber_activation = Membership_norm(5, 5)
 
     def forward(self, x):
         x = self.base(x)
@@ -599,6 +607,7 @@ def save_features_output():
     import cv2
     from pycocotools import coco
     from src.lib.models.decode import ctdet_decode_ret_peak
+    import seaborn as sns
 
     # num_layers: 34
     # heads: {'hm': 5, 'wh': 2, 'reg': 2}

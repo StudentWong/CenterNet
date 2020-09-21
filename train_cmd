@@ -1,0 +1,7 @@
+python main.py ctdetnfs --arch dlaNoBias_34 --dataset shangqi --batch_size 2 --master_batch -1 --lr 5e-4 --gpus 0 --num_workers 8 --num_epochs 150 --lr_step 70,110 --load_model /home/studentw/disk3/tracker/CenterNet/exp/ctdet/default/model_best_shangqi.pth --val_intervals 2
+
+python main.py ctdetnfs --arch dlaNoBias_34 --dataset shangqi --batch_size 2 --master_batch -1 --lr 5e-4 --gpus 0 --num_workers 8 --num_epochs 100 --lr_step 30,70 --load_model /home/studentw/disk3/tracker/CenterNet/exp/ctdetnfs/default/centerloss_256_lamda1.pth --val_intervals 1
+
+python main.py ctdetnfs --arch dlaNoBias_34 --dataset shangqi --batch_size 4 --master_batch -1 --lr 1.25e-4 --gpus 0 --num_workers 8 --num_epochs 100 --lr_step 60,80 --val_intervals 1 --center_weight 0.02
+
+
