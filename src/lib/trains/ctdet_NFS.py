@@ -178,8 +178,8 @@ class CtdetTrainer_NFS(BaseTrainer):
     bar = Bar('{}/{}'.format(opt.task, opt.exp_id), max=num_iters)
     end = time.time()
     for iter_id, batch in enumerate(data_loader):
-      print(self.model_with_loss.model.menber_activation.c)
-      print(self.model_with_loss.model.menber_activation.lamda)
+      # print(self.model_with_loss.model.menber_activation.c)
+      # print(self.model_with_loss.model.menber_activation.lamda)
       if iter_id >= num_iters:
         break
       data_time.update(time.time() - end)

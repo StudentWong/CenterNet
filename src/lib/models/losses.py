@@ -206,7 +206,71 @@ class _menbership_center_loss(torch.autograd.Function):
         return grad_x, grad_c, grad_activate
 
 
+class _menbership_center_loss_freeze(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x, c, actviate):
+        # x: N*D*(w*h)
+        # c: D*C
+        # activate: N*C*(w*h)
 
+        # hidden: N*D*C*(w*h)
+
+        assert x.shape[0] == actviate.shape[0] and len(x.shape) == 3
+        N = x.shape[0]
+        assert x.shape[1] == c.shape[0] and len(c.shape) == 2
+        D = x.shape[1]
+        assert c.shape[1] == actviate.shape[1]
+        C = c.shape[1]
+        assert len(actviate.shape) == 3 and x.shape[2] == actviate.shape[2]
+        wh = x.shape[2]
+
+        x_expand = x.unsqueeze(2).expand([N, D, C, wh])
+        c_expand = c.unsqueeze(0).unsqueeze(3).expand([N, D, C, wh])
+        actviate_expand = actviate.unsqueeze(1).expand([N, D, C, wh])
+        distance = distance_no_sqrt(x_expand, c_expand, dim=1)
+        ctx.save_for_backward(x_expand.detach(), c_expand.detach(), actviate_expand.detach(), distance.detach())
+        #distance shape: N*C*(w*h)
+        assert distance.shape[0] == N \
+               and distance.shape[1] == C \
+               and distance.shape[2] == wh \
+               and actviate.shape[0] == N \
+               and actviate.shape[1] == C \
+               and actviate.shape[2] == wh
+
+        loss_N_C_wh = distance * actviate
+        loss = loss_N_C_wh.sum()
+        return loss.clamp(min=min_clip)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        # x: N*D*(w*h)
+        # c: D*C
+        # activate: N*C*(w*h)
+
+        # hidden: N*D*C*(w*h)
+
+        # x_expand: N*D*C*(w*h)
+        # c_expand: N*D*C*(w*h)
+        # actviate_expand: N*D*C*(w*h)
+        # distance: N*C*(w*h)
+        x_expand, c_expand, actviate_expand, distance = ctx.saved_variables
+
+        grad_x = grad_c = grad_activate = None
+
+        if ctx.needs_input_grad[0]:
+            grad_x_this_layer = (2 * (x_expand - c_expand) * actviate_expand).sum(dim=2)
+            grad_x = grad_x_this_layer * grad_output
+
+        if ctx.needs_input_grad[1]:
+            print('warning: c needs grad')
+            grad_c_this_layer = ((2 * (c_expand - x_expand) * actviate_expand).sum(dim=(0, 3))) \
+                                / actviate_expand.sum(dim=(0, 3))
+            grad_c = grad_c_this_layer * grad_output
+        if ctx.needs_input_grad[2]:
+            grad_activate_this_layer = distance
+            grad_activate = grad_activate_this_layer * grad_output
+
+        return grad_x, grad_c, grad_activate
 
 #
 class CenterLoss(nn.Module):
@@ -214,6 +278,15 @@ class CenterLoss(nn.Module):
   def __init__(self):
     super(CenterLoss, self).__init__()
     self.center_loss = _menbership_center_loss
+
+  def forward(self, x, c, act):
+    return self.center_loss.apply(x, c, act)
+
+class CenterLoss_freeze(nn.Module):
+  '''nn.Module warpper for focal loss'''
+  def __init__(self):
+    super(CenterLoss_freeze, self).__init__()
+    self.center_loss = _menbership_center_loss_freeze
 
   def forward(self, x, c, act):
     return self.center_loss.apply(x, c, act)

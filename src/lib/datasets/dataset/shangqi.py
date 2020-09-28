@@ -220,11 +220,11 @@ def save_rect_img():
 
 def eval_result():
   shangqi_coco = coco.COCO('/home/studentw/disk3/tracker/CenterNet/data/shangqi/annotations/val.json')
-  shangqi_coco_dets = shangqi_coco.loadRes('/home/studentw/disk3/tracker/CenterNet/exp/ctdet/default/results.json')
+  shangqi_coco_dets = shangqi_coco.loadRes('/home/studentw/disk3/tracker/CenterNet/exp/ctdetnfs/default/results.json')
 
   # print(shangqi_coco_dets[imgids[0]])
   coco_eval = COCOeval(shangqi_coco, shangqi_coco_dets, "bbox")
-  coco_eval.params.catIds = [8]
+  coco_eval.params.catIds = [1,2,3,7,8]
   coco_eval.evaluate()
   coco_eval.accumulate()
   coco_eval.summarize()
@@ -234,4 +234,4 @@ import json
 import cv2
 import os
 if __name__ == '__main__':
-  shangqi_cal_mean_and_std()
+  eval_result()

@@ -16,10 +16,12 @@ import torch.utils.model_zoo as model_zoo
 try:
     from .DCNv2.dcn_v2 import DCN
 except:
+    from src.lib.models.networks.DCNv2.dcn_v2 import DCN
     pass
 try:
     from ..membership import Membership_Activation, Membership_norm
 except:
+    from src.lib.models.membership import Membership_Activation, Membership_norm
     pass
 
 
@@ -603,11 +605,13 @@ def get_pose_net_no_bias(num_layers, heads, head_conv=256, down_ratio=4):
 #     cv2.waitKey(0)
 
 
-def save_features_output():
+def save_features_output(ckpt_name, involve_train=False):
+    # from src.lib.models.networks.DCNv2.dcn_v2 import DCN
     import cv2
     from pycocotools import coco
     from src.lib.models.decode import ctdet_decode_ret_peak
     import seaborn as sns
+    import pandas as pd
 
     # num_layers: 34
     # heads: {'hm': 5, 'wh': 2, 'reg': 2}
@@ -615,23 +619,34 @@ def save_features_output():
     model = get_pose_net_no_bias(num_layers=34, heads={'hm': 5, 'wh': 2, 'reg': 2},
                                  head_conv=256)
     # print(model)
-    ckpt = torch.load('/home/studentw/disk3/tracker/CenterNet/exp/ctdet/default/model_best_shangqi.pth')
+    column = list(range(0, 256)) + ['class'] + ['score']
+    df = pd.DataFrame(columns=column)
+    df_line = 0
+    # print(df)
+    # exit()
+    ckpt = torch.load('/home/studentw/disk3/tracker/CenterNet/exp/ctdetnfs/default/' + ckpt_name)
     # print(ckpt['state_dict'].keys())
     model.load_state_dict(ckpt['state_dict'])
     model = model.cuda()
 
-    mean = np.array([0.40789654, 0.44719302, 0.47026115],
+    # mean = np.array([0.40789654, 0.44719302, 0.47026115],
+    #                 dtype=np.float32).reshape(1, 1, 3)
+    # std = np.array([0.28863828, 0.27408164, 0.27809835],
+    #                dtype=np.float32).reshape(1, 1, 3)
+    mean = np.array([0.317200417, 0.317200417, 0.317200417],
                     dtype=np.float32).reshape(1, 1, 3)
-    std = np.array([0.28863828, 0.27408164, 0.27809835],
+    std = np.array([0.22074733, 0.22074733, 0.22074733],
                    dtype=np.float32).reshape(1, 1, 3)
 
     all_img = []
 
-    train_data_dir = '/home/studentw/disk3/tracker/CenterNet/data/shangqi/train'
-    train_list = sorted(os.listdir(train_data_dir))
-    train_num = len(train_list)
-    for img_name in train_list:
-        all_img = all_img + [os.path.join(train_data_dir, img_name)]
+    if involve_train:
+        train_data_dir = '/home/studentw/disk3/tracker/CenterNet/data/shangqi/train'
+        train_list = sorted(os.listdir(train_data_dir))
+        train_num = len(train_list)
+        for img_name in train_list:
+            all_img = all_img + [os.path.join(train_data_dir, img_name)]
+        label_train = coco.COCO('/home/studentw/disk3/tracker/CenterNet/data/shangqi/annotations/train.json')
 
     val_data_dir = '/home/studentw/disk3/tracker/CenterNet/data/shangqi/val'
     val_list = sorted(os.listdir(val_data_dir))
@@ -639,19 +654,18 @@ def save_features_output():
     for img_name in val_list:
         all_img = all_img + [os.path.join(val_data_dir, img_name)]
 
-    label_train = coco.COCO('/home/studentw/disk3/tracker/CenterNet/data/shangqi/annotations/train.json')
     label_val = coco.COCO('/home/studentw/disk3/tracker/CenterNet/data/shangqi/annotations/val.json')
 
     mapping_ids = [1, 2, 3, 7, 8]
     invert_mapping = {1: 0, 2: 1, 3: 2, 7: 3, 8: 4}
     output_file = []
     feature_res = []
-    for clsnum in range(0, 5):
-        file_name = '/home/studentw/disk3/tracker/CenterNet/data/shangqi/feature_out{:d}.npy'.format(clsnum)
-        if not os.path.exists(file_name):
-            os.mknod(file_name)
-        output_file = output_file + [file_name]
-        feature_res = feature_res + [[]]
+    # for clsnum in range(0, 5):
+    #     file_name = '/home/studentw/disk3/tracker/CenterNet/data/shangqi/feature_out{:d}.npy'.format(clsnum)
+    #     if not os.path.exists(file_name):
+    #         os.mknod(file_name)
+    #     output_file = output_file + [file_name]
+    #     feature_res = feature_res + [[]]
     # print(feature_res)
 
     all_num = len(all_img)
@@ -660,7 +674,7 @@ def save_features_output():
         imgnum_in_json = int(img_path.split('/')[-1].replace('.png', ''))
         # print(imgnum_in_json)
         # exit()
-        if i <= train_num-1:
+        if involve_train and i <= train_num-1:
             label_id = label_train.getAnnIds(imgIds=[imgnum_in_json])
             # print(label_id)
             labels = [label_train.anns[label_id_single] for label_id_single in label_id]
@@ -676,7 +690,8 @@ def save_features_output():
 
         # print(img-mean)
         input = torch.tensor(inp, dtype=torch.float).unsqueeze(0).cuda()
-        y = model(input)[-1]
+        with torch.no_grad():
+            y = model(input)[-1]
 
         # print(np.max(y['reg'][0][:].permute(1, 2, 0).detach().cpu().numpy()))
         # exit()
@@ -687,54 +702,110 @@ def save_features_output():
         det_box_cwh[:, 2:4] = det_box_tlxywh[:, 2:4] - det_box_tlxywh[:, 0:2]
         det_box_cwh[:, 0:2] = det_box_tlxywh[:, 0:2] + 0.5*det_box_cwh[:, 2:4]
 
-        # print(det_box_cwh)
-        # print(xs)
-        # print(ys)
-        # print(dets)
-        # exit()
         for label in labels:
+            matched = False
+            lab_cwh = np.array(label['bbox'], dtype=np.float)
+            lab_cwh[2:4] = np.array(label['bbox'][2:4])
+            lab_cwh[0:2] = np.array(label['bbox'][0:2]) + 0.5 * lab_cwh[2:4]
+
             for detnum, det in enumerate(det_box_cwh):
-                # print(det)
-                lab_cwh = np.array(label['bbox'], dtype=np.float)
-                lab_cwh[2:4] = np.array(label['bbox'][2:4])
-                lab_cwh[0:2] = np.array(label['bbox'][0:2]) + 0.5*lab_cwh[2:4]
                 # print(lab_cwh)
                 distance_xy = (lab_cwh[0:2]-det[0:2]) ** 2
-                if np.sqrt(distance_xy[0]+distance_xy[1])<2:
-                    if mapping_ids[int(dets[0][detnum][5])] == label['category_id']:
-                        feature_res[int(dets[0][detnum][5])] = \
-                            feature_res[int(dets[0][detnum][5])] + \
-                            [y['hm'][0, :, int(ys[0][detnum]), int(xs[0][detnum])].detach().cpu().numpy().tolist() + [label['area']]]
+                if np.sqrt(distance_xy[0]+distance_xy[1])<2 \
+                        and mapping_ids[int(dets[0][detnum][5])] == label['category_id']:
+                    # print(int(lab_cwh[0]/4))
+                    # print(xs[0][detnum])
+                    # print(y['reg'][0, 1, int(ys[0][detnum]), int(xs[0][detnum])])
+                    # print(int(lab_cwh[1] / 4))
+                    # print(ys[0][detnum])
+                    # print(y['reg'][0, 0, int(ys[0][detnum]), int(xs[0][detnum])])
+                    # print(y['hm'][0, int(dets[0][detnum][5]), int(ys[0][detnum]), int(xs[0][detnum])])
+                    # print('end')
 
-                    else:
-                        if label['category_id'] == 1 or \
-                                label['category_id'] == 2 or \
-                                label['category_id'] == 3 or \
-                                label['category_id'] == 7 or \
-                                label['category_id'] == 8:
+                    feature_np = y['ft'][0, :, int(ys[0][detnum]),int(xs[0][detnum])].detach().cpu().numpy()
+                    matched = True
+                    feature_dict = dict()
+                    # print(feature_np)
+                    for fnum, f in enumerate(feature_np):
+                        feature_dict[fnum] = f
+                    feature_dict['class'] = label['category_id']
+                    feature_dict['score'] = float(y['hm'][
+                                                    0, invert_mapping[label['category_id']], int(ys[0][detnum]), int(
+                                                    xs[0][detnum])].detach().cpu().numpy())
+                    df.loc[df_line] = feature_dict
+                    df_line = df_line + 1
 
-                            feature_res[invert_mapping[label['category_id']]] = \
-                                feature_res[invert_mapping[label['category_id']]] + \
-                                [y['hm'][0, :, int(ys[0][detnum]), int(xs[0][detnum])].detach().cpu().numpy().tolist() + [
-                                    label['area']]]
 
-                        # print(feature_res[int(dets[0][detnum][5])])
-                        # exit()
-                        # print(xs[detnum])
-                        # print(y['hm'].shape)
-                        # print(y['hm'][0, int(dets[0][detnum][5]), int(ys[0][detnum]), int(xs[0][detnum])])
-                        # print(y['hm'][0, :, int(ys[0][detnum]), int(xs[0][detnum])])
+            if not matched and (label['category_id'] in mapping_ids):
+                feature_np = y['ft'][0, :, int(lab_cwh[1] / 4), int(lab_cwh[0] / 4)].detach().cpu().numpy()
+                matched = True
+                feature_dict = dict()
+                # print(feature_np)
+                for fnum, f in enumerate(feature_np):
+                    feature_dict[fnum] = f
+                feature_dict['class'] = label['category_id']
+                feature_dict['score'] = float(y['hm'][
+                                                  0, invert_mapping[label['category_id']], int(lab_cwh[1] / 4), int(lab_cwh[0] / 4)].detach().cpu().numpy())
+                df.loc[df_line] = feature_dict
+                df_line = df_line + 1
+        print('{:d}/{:d}'.format(i, all_num))
+        # print(df)
+        # exit()
+    df.to_csv("./" + ckpt_name.replace('.pth', '') + '.csv')
 
-                        # print(dets[0][detnum])
-                        # print(lab_cwh)
-                        # print(int(dets[0][detnum][5]))
-        if i %10 == 0:
-            print('{:d} of {:d}'.format(i, all_num))
+def draw_box(path, feature=256):
+    import seaborn as sns
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    heads = list(range(0, feature))
+    df = pd.read_csv(path, header=0,index_col=0)
+    # print(df)
+    for head in heads:
+        sns.boxplot(x="class", y=str(head), data=df)
+        # sns.swarmplot(x="class", y=str(head), data=df, color=".25")
+        plt.show()
 
-    for clsnum in range(0, 5):
-        arr = np.array(feature_res[clsnum])
-        print(arr.shape)
-        np.save(output_file[clsnum], np.array(feature_res[clsnum]))
+def draw_reduce_dim_feature(path, feature=256, transformer=None, alpha=False):
+    import seaborn as sns
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from sklearn.decomposition import PCA
+
+    cat_id = [1, 2, 3, 7, 8]
+    heads = list(range(0, feature))
+    color_mapping = {1: 'red', 2: 'blue', 3: 'green', 7: 'orange', 8: 'black'}
+    df = pd.read_csv(path, header=0, index_col=0)
+    heads_feature = list(range(0, 256))
+    for i, f_int in enumerate(heads_feature):
+        heads_feature[i] = str(f_int)
+
+    feat_np = np.array(df[heads_feature])
+    cat_np = np.array(df['class'])
+    score = np.array(df['score'])
+
+    color = []
+    for cat_i in cat_np:
+        color = color + [color_mapping[cat_i]]
+    # print(cat_np)
+    if transformer is None:
+        transformer = PCA(2)
+        transformer.fit(feat_np)
+    reduce_dim = transformer.transform(feat_np)
+    # plt.scatter(reduce_dim[:, 0], reduce_dim[:, 1], c=color, s=3, alpha=score)
+    all_len = reduce_dim.shape[0]
+    if alpha:
+        for i in range(0, all_len):
+            plt.scatter(reduce_dim[i:i+1, 0], reduce_dim[i:i+1, 1], c=color[i], s=3, alpha=score[i])
+            print('{:d}/{:d}'.format(i, all_len))
+    else:
+        plt.scatter(reduce_dim[:, 0], reduce_dim[:, 1], c=color, s=3)
+    plt.xlim([-2, 2])
+    plt.ylim([-2, 2])
+    plt.show()
+    return transformer
+    # print(reduce_dim.shape)
+    # for cat in cat_id:
+
 
 
 # from src.lib.models.networks.DCNv2.dcn_v2 import DCN
@@ -765,6 +836,28 @@ def save_features_output():
 
 
 
+if __name__ == '__main__':
+    import seaborn as sns
+    import pandas as pd
+    import matplotlib.pyplot as plt
+
+
+    # testdata_cat1 = [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]]
+    # testdata_cat2 = [[1, 1], [1.5, 1], [2, 1], [2.5, 1], [3, 1]]
+    # df = np.array(testdata_cat1 + testdata_cat2)
+    # df = pd.DataFrame(columns=['data', 'class'])
+    # print(df)
+    # df.loc[0]={'data':0, 'class':1}
+    # df.loc[1] = {'data':0.5, 'class':2}
+    # print(df)
+    # exit()
+    # sns.boxplot(x="class", y="data", data=df)
+    # plt.show()
+    # save_features_output('2080_lamda0.05_batch8_lr1.25e-4_ap82.pth')
+
+    # draw_box('/home/studentw/disk3/tracker/CenterNet/src/2080_lamda0.01_batch8_lr1.25e-4_ap83_best.csv')
+    draw_reduce_dim_feature('/home/studentw/disk3/tracker/CenterNet/src/2080_lamda0.01_batch8_lr1.25e-4_ap83_best.csv')
+    draw_reduce_dim_feature('/home/studentw/disk3/tracker/CenterNet/src/2080_lamda0.05_batch8_lr1.25e-4_ap82.csv')
 
 
 

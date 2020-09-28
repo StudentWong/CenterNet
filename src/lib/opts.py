@@ -16,7 +16,6 @@ class opts(object):
                              help='coco | kitti | coco_hp | pascal')
     self.parser.add_argument('--exp_id', default='default')
     self.parser.add_argument('--test', action='store_true')
-    self.parser.add_argument('--center_weight', type=float, default=0.1)
     self.parser.add_argument('--debug', type=int, default=0,
                              help='level of visualization.'
                                   '1: only show the final detection results'
@@ -82,6 +81,8 @@ class opts(object):
     
     # train
     self.parser.add_argument('--lr', type=float, default=1.25e-4, 
+                             help='learning rate for batch size 32.')
+    self.parser.add_argument('--center_loss_alpha', type=float, default=1.25e-3,
                              help='learning rate for batch size 32.')
     self.parser.add_argument('--lr_step', type=str, default='90,120',
                              help='drop learning rate by 10.')
@@ -162,6 +163,7 @@ class opts(object):
                              help='loss weight for keypoint local offsets.')
     self.parser.add_argument('--wh_weight', type=float, default=0.1,
                              help='loss weight for bounding box size.')
+    self.parser.add_argument('--center_weight', type=float, default=0.1)
     # multi_pose
     self.parser.add_argument('--hp_weight', type=float, default=1,
                              help='loss weight for human pose offset.')
@@ -319,7 +321,7 @@ class opts(object):
                    'wh': 2 if not opt.cat_spec_wh else 2 * opt.num_classes}
       if opt.reg_offset:
         opt.heads.update({'reg': 2})
-    elif opt.task == 'ctdetnfs':
+    elif opt.task == 'ctdetnfs' or opt.task == 'ctdetfreeze':
       # assert opt.dataset in ['pascal', 'coco']
       opt.heads = {'hm': opt.num_classes,
                    'wh': 2 if not opt.cat_spec_wh else 2 * opt.num_classes}

@@ -157,91 +157,163 @@ class Membership_norm(nn.Module):
 
         return output.clamp(min=zero_clip)
 
+class Membership_freeze(nn.Module):
+    def __init__(self):
+        super(Membership_freeze, self).__init__()
 
-import numpy as np
+    def forward(self, input, c, lamda):
+        # input shape: N*D*(w*h)
+        # c shape: D*C
+        # lamda shape : D*C
+        # output: N*C*(w*h)
 
-if __name__ == '__main__':
-    from losses import FocalLoss, CenterLoss
-    dim = 100
+        # print(input.shape)
+        # print(self.c.shape)
+        # print(self.lamda.shape)
 
-    x_in1 = np.linspace(-1, 1, num=dim)
-    x_in2 = np.linspace(-1, 1, num=dim)
-    x_in = 0.1*np.ones((dim*dim, 2), dtype=np.float)
-    y = np.zeros((dim*dim, 4), dtype=np.float)
+        N = input.shape[0]
+        assert input.shape[1] == c.shape[0] and c.shape[0] == lamda.shape[0]
+        D = input.shape[1]
+        assert c.shape[1] == lamda.shape[1]
+        C = c.shape[1]
+        assert len(input.shape) == 3
+        wh = input.shape[2]
+        input_expand = input.unsqueeze(2).expand([N, D, C, wh])
 
-    for i, x1 in enumerate(x_in1):
-        for j, x2 in enumerate(x_in2):
-            x_in[i * dim + j][0] = x1
-            x_in[i * dim + j][1] = x2
-            if x1 > 0 and x2 > 0:
-                y[i * dim + j][0] = np.sqrt((-4 * (x1 - 0.5) ** 2 + 1).clip(min=1e-5) * (-4 * (x2 - 0.5) ** 2 + 1).clip(min=1e-5))
-            elif x1 > 0 and x2 < 0:
-                y[i * dim + j][1] = np.sqrt((-4 * (x1 - 0.5) ** 2 + 1).clip(min=1e-5) * (-4 * (x2 + 0.5) ** 2 + 1).clip(min=1e-5))
-            elif x1 < 0 and x2 < 0:
-                y[i * dim + j][2] = np.sqrt((-4 * (x1 + 0.5) ** 2 + 1).clip(min=1e-5) * (-4 * (x2 + 0.5) ** 2 + 1).clip(min=1e-5))
-            elif x1 < 0 and x2 > 0:
-                y[i * dim + j][3] = np.sqrt((-4 * (x1 + 0.5) ** 2 + 1).clip(min=1e-5) * (-4 * (x2 - 0.5) ** 2 + 1).clip(min=1e-5))
+        c_expand = c.unsqueeze(0).unsqueeze(3).expand_as(input_expand)
+        lamda_expand = lamda.unsqueeze(0).unsqueeze(3).expand_as(input_expand)
 
-    # x_in = x_in1
-    # y=(-4 * (x_in - 0.5) ** 2 + 1).clip(min=0.0)
-    # print(x_in)
-    # print(y)
-    # exit()
+        out = (-((input_expand - c_expand)**2)/(2 * (lamda_expand**2))).exp()
 
-    x_in_tensor = torch.tensor(x_in, requires_grad=False, dtype=torch.float).cuda()
-    y_label_tensor = torch.tensor(y, requires_grad=False, dtype=torch.float).unsqueeze(2).cuda()
+        output = out.prod(dim=1)
 
-    # layer = Membership_Activation(2, 4,
-    #                               init_c=0.2*torch.ones((2, 4), dtype=torch.float),
-    #                               init_lamda=1.5*torch.ones((2, 4), dtype=torch.float)).cuda()
+        return output.clamp(min=zero_clip), out
 
-    fc = torch.nn.Linear(2, 2).cuda()
-    layer = Membership_norm(2, 4,
-                            init_c=-5 * torch.ones((2, 4), dtype=torch.float),
-                            init_lamda=4 * torch.ones((2, 4), dtype=torch.float)).cuda()
 
-    # x = torch.tensor([[[0.9, 0.1], [0.9, 0.1]], [[-0.9, 0.1], [-0.1, -2.5]]], dtype=torch.float, requires_grad=True)
-    # x2 = x ** 2
-    # print(x2.requires_grad)
-    # print(x.shape)
-    # print(layer(x))
-    # print(layer.c)
-    # print(x.shape)
-    # loss_focal = torch.nn.MSELoss()
-    loss_focal = FocalLoss()
-    loss_center = CenterLoss()
-    para = [
-        {"params": fc.parameters(), "lr": 1e-3},
-        {"params": layer.c, "lr": 1e-3},
-        {"params": layer.lamda, "lr": 1e-3},
-    ]
+# import numpy as np
+#
+# if __name__ == '__main__':
+#     from losses import FocalLoss, CenterLoss
+#     dim = 100
+#
+#     x_in1 = np.linspace(-1, 1, num=dim)
+#     x_in2 = np.linspace(-1, 1, num=dim)
+#     x_in = 0.1*np.ones((dim*dim, 2), dtype=np.float)
+#     y = np.zeros((dim*dim, 4), dtype=np.float)
+#
+#     for i, x1 in enumerate(x_in1):
+#         for j, x2 in enumerate(x_in2):
+#             x_in[i * dim + j][0] = x1
+#             x_in[i * dim + j][1] = x2
+#             if x1 > 0 and x2 > 0:
+#                 y[i * dim + j][0] = np.sqrt((-4 * (x1 - 0.5) ** 2 + 1).clip(min=1e-5) * (-4 * (x2 - 0.5) ** 2 + 1).clip(min=1e-5))
+#             elif x1 > 0 and x2 < 0:
+#                 y[i * dim + j][1] = np.sqrt((-4 * (x1 - 0.5) ** 2 + 1).clip(min=1e-5) * (-4 * (x2 + 0.5) ** 2 + 1).clip(min=1e-5))
+#             elif x1 < 0 and x2 < 0:
+#                 y[i * dim + j][2] = np.sqrt((-4 * (x1 + 0.5) ** 2 + 1).clip(min=1e-5) * (-4 * (x2 + 0.5) ** 2 + 1).clip(min=1e-5))
+#             elif x1 < 0 and x2 > 0:
+#                 y[i * dim + j][3] = np.sqrt((-4 * (x1 + 0.5) ** 2 + 1).clip(min=1e-5) * (-4 * (x2 - 0.5) ** 2 + 1).clip(min=1e-5))
+#
+#     # x_in = x_in1
+#     # y=(-4 * (x_in - 0.5) ** 2 + 1).clip(min=0.0)
+#     # print(x_in)
+#     # print(y)
+#     # exit()
+#
+#     x_in_tensor = torch.tensor(x_in, requires_grad=False, dtype=torch.float).cuda()
+#     y_label_tensor = torch.tensor(y, requires_grad=False, dtype=torch.float).unsqueeze(2).cuda()
+#
+#     # layer = Membership_Activation(2, 4,
+#     #                               init_c=0.2*torch.ones((2, 4), dtype=torch.float),
+#     #                               init_lamda=1.5*torch.ones((2, 4), dtype=torch.float)).cuda()
+#
+#     fc = torch.nn.Linear(2, 2).cuda()
+#     layer = Membership_norm(2, 4,
+#                             init_c=-5 * torch.ones((2, 4), dtype=torch.float),
+#                             init_lamda=4 * torch.ones((2, 4), dtype=torch.float)).cuda()
+#
+#     # x = torch.tensor([[[0.9, 0.1], [0.9, 0.1]], [[-0.9, 0.1], [-0.1, -2.5]]], dtype=torch.float, requires_grad=True)
+#     # x2 = x ** 2
+#     # print(x2.requires_grad)
+#     # print(x.shape)
+#     # print(layer(x))
+#     # print(layer.c)
+#     # print(x.shape)
+#     # loss_focal = torch.nn.MSELoss()
+#     loss_focal = FocalLoss()
+#     loss_center = CenterLoss()
+#     para = [
+#         {"params": fc.parameters(), "lr": 1e-3},
+#         {"params": layer.c, "lr": 1e-3},
+#         {"params": layer.lamda, "lr": 1e-3},
+#     ]
+#
+#     # optim = torch.optim.SGD(para)
+#     optim = torch.optim.Adam(para)
+#     # bestloss = 1e5
+#     # bestnetweightfc = []
+#     # bestnetweightlayer = []
+#
+#     for i in range(0, 100000):
+#         h = fc(x_in_tensor).unsqueeze(2)
+#         y = layer(h)
+#         # print(y.squeeze(2))
+#
+#         floss = loss_focal(y, y_label_tensor)
+#         closs = 0.5*loss_center(h, layer.c, y)
+#                # + 0.5*((0.0-layer.lamda).clamp(min=1e-5).sum()) \
+#                # - 0.5 * ((0.6 - layer.lamda).clamp(max=-1e-5).sum()) \
+#             # + 0.5*((layer.c-1).clamp(min=1e-5).sum())\
+#             # - 0.5*((1+layer.c).clamp(max=-1e-5).sum()) #\
+#         loss = floss + closs
+#         optim.zero_grad()
+#         loss.backward()
+#         # print(layer.c.grad)
+#         # print(layer.lamda.grad)
+#         optim.step()
+#         print(loss)
+#         # print(layer.lamda)
+#         # print(layer.c)
 
-    # optim = torch.optim.SGD(para)
-    optim = torch.optim.Adam(para)
-    # bestloss = 1e5
-    # bestnetweightfc = []
-    # bestnetweightlayer = []
+# import numpy as np
+# if __name__ == '__main__':
+#     layer = Membership_norm(2, 4,
+#                             init_c=-5 * torch.ones((2, 4), dtype=torch.float),
+#                             init_lamda=4 * torch.ones((2, 4), dtype=torch.float)).cuda()
+#     layer.c = 0.5 * layer.c + 1
 
-    for i in range(0, 100000):
-        h = fc(x_in_tensor).unsqueeze(2)
-        y = layer(h)
-        # print(y.squeeze(2))
 
-        floss = loss_focal(y, y_label_tensor)
-        closs = 0.5*loss_center(h, layer.c, y)
-               # + 0.5*((0.0-layer.lamda).clamp(min=1e-5).sum()) \
-               # - 0.5 * ((0.6 - layer.lamda).clamp(max=-1e-5).sum()) \
-            # + 0.5*((layer.c-1).clamp(min=1e-5).sum())\
-            # - 0.5*((1+layer.c).clamp(max=-1e-5).sum()) #\
-        loss = floss + closs
-        optim.zero_grad()
-        loss.backward()
-        # print(layer.c.grad)
-        # print(layer.lamda.grad)
-        optim.step()
-        print(loss)
-        # print(layer.lamda)
-        # print(layer.c)
+# if __name__ == '__main__':
+#     import torch
+#     class fc256_2_256(torch.nn.Module):
+#         def __init__(self):
+#             super(fc256_2_256, self).__init__()
+#             self.layer1 = torch.nn.Linear(256, 2)
+#             self.layer1_activation = torch.nn.ReLU()
+#
+#             self.layer2 = torch.nn.Linear(2, 256)
+#             self.layer2_activation = torch.nn.ReLU()
+#
+#         def forward(self, input_tensor):
+#             h = self.layer1(input_tensor)
+#             h = self.layer1_activation(h)
+#             h = self.layer2(h)
+#             out = self.layer2_activation(h)
+#             return out
+#     model = fc256_2_256()
+#     data = torch.rand(2000, 256)
+#     label = torch.rand(2000, 256)
+#     Loss = torch.nn.MSELoss()
+#     opt = torch.optim.SGD(model.parameters(), lr=1e-2)
+#
+#     for i in range(0, 100):
+#         y = model(data)
+#         loss = Loss(y, label)
+#         opt.zero_grad()
+#         loss.backward()
+#         opt.step()
+#         print(loss)
+
 
 # import numpy as np
 # if __name__ == '__main__':

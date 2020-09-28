@@ -30,6 +30,7 @@ _sample_factory = {
   'exdet': EXDetDataset,
   'ctdet': CTDetDataset,
   'ctdetnfs': CTDetDataset,
+  'ctdetfreeze': CTDetDataset,
   'ddd': DddDataset,
   'multi_pose': MultiPoseDataset
 }
