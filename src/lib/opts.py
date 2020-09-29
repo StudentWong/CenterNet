@@ -321,7 +321,7 @@ class opts(object):
                    'wh': 2 if not opt.cat_spec_wh else 2 * opt.num_classes}
       if opt.reg_offset:
         opt.heads.update({'reg': 2})
-    elif opt.task == 'ctdetnfs' or opt.task == 'ctdetfreeze':
+    elif opt.task == 'ctdetnfs' or opt.task == 'ctdetfreeze' or opt.task == 'ctdetgt':
       # assert opt.dataset in ['pascal', 'coco']
       opt.heads = {'hm': opt.num_classes,
                    'wh': 2 if not opt.cat_spec_wh else 2 * opt.num_classes}

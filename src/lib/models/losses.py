@@ -272,6 +272,85 @@ class _menbership_center_loss_freeze(torch.autograd.Function):
 
         return grad_x, grad_c, grad_activate
 
+
+class _menbership_center_loss_gt(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x, c, actviate, gt_hm):
+        # x: N*D*(w*h)
+        # c: D*C
+        # activate: N*C*(w*h)
+        # gt_hm: N*C*W*H
+
+        # hidden: N*D*C*(w*h)
+
+        assert x.shape[0] == actviate.shape[0] \
+               and gt_hm.shape[0] == actviate.shape[0] \
+               and len(x.shape) == 3
+        N = x.shape[0]
+        assert x.shape[1] == c.shape[0] and len(c.shape) == 2
+        D = x.shape[1]
+        assert c.shape[1] == actviate.shape[1] and actviate.shape[1] == gt_hm.shape[1]
+        C = c.shape[1]
+        assert len(actviate.shape) == 3 \
+               and x.shape[2] == actviate.shape[2] \
+               and gt_hm.shape[2] * gt_hm.shape[3] == x.shape[2] \
+               and gt_hm.is_contiguous()
+        wh = x.shape[2]
+        gt_hm = gt_hm.view(N, C, wh)
+
+        x_expand = x.unsqueeze(2).expand([N, D, C, wh])
+        c_expand = c.unsqueeze(0).unsqueeze(3).expand([N, D, C, wh])
+        actviate_expand = actviate.unsqueeze(1).expand([N, D, C, wh])
+        distance = distance_no_sqrt(x_expand, c_expand, dim=1)
+        gt_hm_expand = gt_hm.unsqueeze(1).expand([N, D, C, wh])
+        ctx.save_for_backward(x_expand.detach(), c_expand.detach(),
+                              actviate_expand.detach(), distance.detach(),
+                              gt_hm_expand.detach(), gt_hm.detach())
+        #distance shape: N*C*(w*h)
+        assert distance.shape[0] == N \
+               and distance.shape[1] == C \
+               and distance.shape[2] == wh \
+               and actviate.shape[0] == N \
+               and actviate.shape[1] == C \
+               and actviate.shape[2] == wh
+
+        loss_N_C_wh = (distance * (1-actviate) * gt_hm)
+        loss = loss_N_C_wh.sum()
+        return loss.clamp(min=min_clip)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        # x: N*D*(w*h)
+        # c: D*C
+        # activate: N*C*(w*h)
+        # gt_hm: N*C*W*H
+
+        # hidden: N*D*C*(w*h)
+
+        # x_expand: N*D*C*(w*h)
+        # c_expand: N*D*C*(w*h)
+        # actviate_expand: N*D*C*(w*h)
+        # distance: N*C*(w*h)
+        x_expand, c_expand, actviate_expand, distance, gt_hm_expand, gt_hm = ctx.saved_variables
+
+        grad_x = grad_c = grad_activate = grad_gh_hm = None
+
+        if ctx.needs_input_grad[0]:
+            grad_x_this_layer = (2 * (x_expand - c_expand) * (1-actviate_expand) * gt_hm_expand).sum(dim=2)
+            grad_x = grad_x_this_layer * grad_output
+
+        if ctx.needs_input_grad[1]:
+            grad_c_this_layer = ((2 * (c_expand - x_expand) * (1-actviate_expand) * gt_hm_expand).sum(dim=(0, 3))) \
+                                / ((1-actviate_expand) * gt_hm_expand+1e-5).sum(dim=(0, 3))
+            grad_c = grad_c_this_layer * grad_output
+        if ctx.needs_input_grad[2]:
+            grad_activate_this_layer = -distance * gt_hm
+            grad_activate = grad_activate_this_layer * grad_output
+        # if ctx.needs_input_grad[3]:
+        # print(ctx.needs_input_grad[3])
+        assert not ctx.needs_input_grad[3]
+        return grad_x, grad_c, grad_activate, grad_gh_hm
+
 #
 class CenterLoss(nn.Module):
   '''nn.Module warpper for focal loss'''
@@ -290,6 +369,16 @@ class CenterLoss_freeze(nn.Module):
 
   def forward(self, x, c, act):
     return self.center_loss.apply(x, c, act)
+
+class CenterLoss_gt(nn.Module):
+    '''nn.Module warpper for focal loss'''
+
+    def __init__(self):
+        super(CenterLoss_gt, self).__init__()
+        self.center_loss = _menbership_center_loss_gt
+
+    def forward(self, x, c, act, gt_hm):
+        return self.center_loss.apply(x, c, act, gt_hm)
 
 
 class FocalLoss(nn.Module):

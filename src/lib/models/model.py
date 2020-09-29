@@ -14,6 +14,7 @@ from .networks.pose_dla_dcn_no_bias import get_pose_net_no_bias as get_dla_dcn_n
 from .networks.pose_dla_dcn_freeze_update import get_pose_net_freeze_update as get_dla_dcn_freeze_update
 from .networks.resnet_dcn import get_pose_net as get_pose_net_dcn
 from .networks.large_hourglass import get_large_hourglass_net
+from .networks.pose_dla_dcn_gt_centerloss import get_pose_net_gt_centerloss as get_dla_dcn_gt_centerloss
 
 _model_factory = {
   'res': get_pose_net, # default Resnet with deconv
@@ -21,6 +22,7 @@ _model_factory = {
   'dla': get_dla_dcn,
   'dlaNoBias': get_dla_dcn_no_bias,
   'dlaFreezeUpdate': get_dla_dcn_freeze_update,
+  'dlagt': get_dla_dcn_gt_centerloss,
   'resdcn': get_pose_net_dcn,
   'hourglass': get_large_hourglass_net,
 }
