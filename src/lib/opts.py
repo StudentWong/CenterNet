@@ -56,6 +56,7 @@ class opts(object):
                              help='visualization threshold.')
     self.parser.add_argument('--debugger_theme', default='white', 
                              choices=['white', 'black'])
+    self.parser.add_argument('--save_dir', type=str, default='', help='save dir')
     
     # model
     self.parser.add_argument('--arch', default='dla_34', 
@@ -274,7 +275,10 @@ class opts(object):
     opt.root_dir = os.path.join(os.path.dirname(__file__), '..', '..')
     opt.data_dir = os.path.join(opt.root_dir, 'data')
     opt.exp_dir = os.path.join(opt.root_dir, 'exp', opt.task)
-    opt.save_dir = os.path.join(opt.exp_dir, opt.exp_id)
+    if opt.save_dir == '' or opt.save_dir is None:
+        opt.save_dir = os.path.join(opt.exp_dir, opt.exp_id)
+    else:
+        opt.save_dir = os.path.join(opt.exp_dir, opt.save_dir)
     opt.debug_dir = os.path.join(opt.save_dir, 'debug')
     print('The output will be saved to ', opt.save_dir)
     

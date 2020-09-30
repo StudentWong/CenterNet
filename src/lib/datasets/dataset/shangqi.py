@@ -113,6 +113,26 @@ class ShangQi(data.Dataset):
     coco_eval.accumulate()
     coco_eval.summarize()
 
+  def run_eval_return(self, results, save_dir):
+    # result_json = os.path.join(save_dir, "results.json")
+    # detections  = self.convert_eval_format(results)
+    # json.dump(detections, open(result_json, "w"))
+    self.save_results(results, save_dir)
+    coco_dets = self.coco.loadRes('{}/results.json'.format(save_dir))
+    coco_eval = COCOeval(self.coco, coco_dets, "bbox")
+    coco_eval.params.catIds = self._valid_ids
+    coco_eval.params.catIds = [1, 2, 3, 7, 8]
+    coco_eval.evaluate()
+    coco_eval.accumulate()
+    coco_eval.summarize()
+    ret = dict()
+    ret['AP'] = coco_eval.stats[0]
+    ret['AP50'] = coco_eval.stats[1]
+    ret['AR1'] = coco_eval.stats[6]
+    ret['AR10'] = coco_eval.stats[7]
+    ret['AR100'] = coco_eval.stats[8]
+    return ret
+
 def shangqi_cal_mean_and_std(train_data_dir='/home/studentw/disk3/tracker/CenterNet/data/shangqi/train', val_data_dir=None):
   train_list = sorted(os.listdir(train_data_dir))
   all_img=[]
@@ -228,6 +248,14 @@ def eval_result():
   coco_eval.evaluate()
   coco_eval.accumulate()
   coco_eval.summarize()
+  ret = dict()
+  ret['AP'] = coco_eval.stats[0]
+  ret['AP50'] = coco_eval.stats[1]
+  ret['AR1'] = coco_eval.stats[6]
+  ret['AR10'] = coco_eval.stats[7]
+  ret['AR100'] = coco_eval.stats[8]
+  return ret
+  # print(ret)
 
 
 import json

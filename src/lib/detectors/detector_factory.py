@@ -14,6 +14,7 @@ detector_factory = {
   'ddd': DddDetector,
   'ctdet': CtdetDetector,
   'ctdetnfs': CtdetDetector_NFS,
+  'ctdetgt': CtdetDetector_NFS,
   'ctdetfreeze': CtdetDetector_NFS_freeze,
   'multi_pose': MultiPoseDetector, 
 }

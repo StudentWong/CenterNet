@@ -530,7 +530,7 @@ class DLASeg_no_bias(nn.Module):
         # self.menber_activation = Membership_norm(5, 5,
         #                                          init_c=init_c/1,
         #                                          init_lamda=init_lamda/1)
-        self.menber_activation = Membership_norm(head_conv, 5)
+        self.menber_activation = Membership_norm(head_conv, heads['hm'])
         # self.menber_activation = Membership_norm(5, 5)
 
     def forward(self, x):

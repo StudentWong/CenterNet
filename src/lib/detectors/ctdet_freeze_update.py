@@ -22,8 +22,8 @@ from utils.debugger import Debugger
 from .base_detector import BaseDetector
 
 class CtdetDetector_NFS_freeze(BaseDetector):
-  def __init__(self, opt):
-    super(CtdetDetector_NFS_freeze, self).__init__(opt)
+  def __init__(self, opt, train_eval=False, model=None):
+    super(CtdetDetector_NFS_freeze, self).__init__(opt, train_eval, model)
   
   def process(self, images, return_time=False):
     with torch.no_grad():
