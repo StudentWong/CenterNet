@@ -20,6 +20,7 @@ except:
     pass
 try:
     from ..membership import Membership_Activation, Membership_norm
+    from .MemberShip_cuda import Membership_norm_cuda
 except:
     from src.lib.models.membership import Membership_Activation, Membership_norm
     pass
@@ -530,7 +531,9 @@ class DLASeg_no_bias(nn.Module):
         # self.menber_activation = Membership_norm(5, 5,
         #                                          init_c=init_c/1,
         #                                          init_lamda=init_lamda/1)
-        self.menber_activation = Membership_norm(head_conv, heads['hm'])
+        self.catnum = heads['hm']
+        # self.menber_activation = Membership_norm(head_conv, heads['hm'])
+        self.menber_activation = Membership_norm_cuda(head_conv, heads['hm'])
         # self.menber_activation = Membership_norm(5, 5)
 
     def forward(self, x):
@@ -551,7 +554,7 @@ class DLASeg_no_bias(nn.Module):
                 origin_shape = z['ft'].shape
                 z[head] = self.menber_activation(
                     z['ft'].view(origin_shape[0], origin_shape[1], origin_shape[2]*origin_shape[3])
-                ).view(origin_shape[0], 5, origin_shape[2], origin_shape[3])
+                ).view(origin_shape[0], self.catnum, origin_shape[2], origin_shape[3])
                 # print(z[head])
                 z['center'] = self.menber_activation.c
             else:

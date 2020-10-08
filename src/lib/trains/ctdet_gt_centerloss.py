@@ -107,7 +107,14 @@ class CtdetTrainer_GT_Centerloss(BaseTrainer):
     # print(self.optimizer)
   
   def _get_losses(self, opt):
-    loss_states = ['loss', 'hm_loss', 'wh_loss', 'off_loss', 'center_loss']
+    loss_states = ['loss', 'hm_loss']
+    if opt.wh_weight > 0:
+      loss_states = loss_states + ['wh_loss']
+    if opt.reg_offset and opt.off_weight > 0:
+      loss_states = loss_states + ['off_loss']
+    if opt.center_weight > 0:
+      loss_states = loss_states + ['center_loss']
+
     loss = CtdetLoss_NFS(opt)
     return loss_states, loss
 
