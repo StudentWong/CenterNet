@@ -9,6 +9,8 @@ import json
 import os
 
 import torch.utils.data as data
+from src.tools.voc_eval_lib.datasets.pascal_voc import pascal_voc
+import pickle
 
 class PascalVOC(data.Dataset):
   num_classes = 20
@@ -80,3 +82,37 @@ class PascalVOC(data.Dataset):
     self.save_results(results, save_dir)
     os.system('python tools/reval.py ' + \
               '{}/results.json'.format(save_dir))
+
+  def run_eval_return(self, results, save_dir):
+    # result_json = os.path.join(save_dir, "results.json")
+    # detections  = self.convert_eval_format(results)
+    # json.dump(detections, open(result_json, "w"))
+    self.save_results(results, save_dir)
+
+    imdb = pascal_voc('test', '2007')
+    imdb.competition_mode(False)
+    imdb.config['matlab_eval'] = False
+    detection_file = '{}/results.json'.format(save_dir)
+    with open(os.path.join(detection_file), 'rb') as f:
+      if 'json' in detection_file:
+        dets = json.load(f)
+      else:
+        dets = pickle.load(f, encoding='latin1')
+    # import pdb; pdb.set_trace()
+    # if args.apply_nms:
+    if False:
+      print('Applying NMS to all detections')
+      test_nms = 0.3
+      nms_dets = apply_nms(dets, test_nms)
+    else:
+      nms_dets = dets
+
+    print('Evaluating detections')
+    map = imdb.evaluate_detections(nms_dets)
+
+    ret['AP'] = map
+    ret['AP50'] = 0.0
+    ret['AR1'] = 0.0
+    ret['AR10'] = 0.0
+    ret['AR100'] = 0.0
+    return ret

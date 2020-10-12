@@ -1,0 +1,1 @@
+python main_with_eval.py ctdetgt --arch dlagt_34 --exp_id pascal_dla_384 --dataset pascal --num_epochs 70 --lr_step 45,60 --batch_size 1

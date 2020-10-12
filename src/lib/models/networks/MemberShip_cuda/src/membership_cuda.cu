@@ -3,7 +3,7 @@
 
 #define BLOCK 32
 #define IDX2D(i, j, dj) (dj * i + j)
-#define MINGRADCLIP 0.00001
+#define MINGRADCLIP 0.0000
 
 int max_dim(int N, int C){
     if (N>C) {
@@ -65,7 +65,6 @@ void MemberShipForward(Dtype* in, Dtype* c, Dtype* la, Dtype* o, int N, int D, i
 }
 
 
-
 template <typename Dtype>
 __global__ void MemberShipInputBackwardKernel(Dtype* in_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* la, Dtype* o, int N, int D, int C)
 {
@@ -92,6 +91,7 @@ __global__ void MemberShipInputBackwardKernel(Dtype* in_g, Dtype* g_l, Dtype* in
       in_g[IDX2D(y, x, D)] = Ovalue;
     // o[0] = 5.0;
 }
+
 template <typename Dtype>
 void MemberShipInputBackward(Dtype* in_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* la, Dtype* o, int N, int D, int C,
                   cudaStream_t stream) {
@@ -136,6 +136,7 @@ __global__ void MemberShipCenterBackwardKernel(Dtype* c_g, Dtype* g_l, Dtype* in
       c_g[IDX2D(y, x, C)] = Ovalue;
     // o[0] = 5.0;
 }
+
 template <typename Dtype>
 void MemberShipCenterBackward(Dtype* c_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* la, Dtype* o, int N, int D, int C,
                   cudaStream_t stream) {
@@ -152,8 +153,6 @@ void MemberShipCenterBackward(Dtype* c_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype
     throw std::runtime_error(Formatter()
                              << "CUDA kernel failed : " << cudaGetErrorString(err));
 }
-
-
 
 
 template <typename Dtype>
@@ -189,6 +188,7 @@ __global__ void MemberShipLamdaBackwardKernel(Dtype* la_g, Dtype* g_l, Dtype* in
     la_g[IDX2D(y, x, C)] = Ovalue;
     // o[0] = 5.0;
 }
+
 template <typename Dtype>
 void MemberShipLamdaBackward(Dtype* la_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* la, Dtype* o, int N, int D, int C,
                   cudaStream_t stream) {
@@ -205,6 +205,44 @@ void MemberShipLamdaBackward(Dtype* la_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype
     throw std::runtime_error(Formatter()
                              << "CUDA kernel failed : " << cudaGetErrorString(err));
 }
+
+
+// template <typename Dtype>
+// __global__ void CenterLossForwardKernel(Dtype* in, Dtype* c, Dtype* gt, Dtype* gts, int N, int D, int C)
+// {
+//     //in: N*D
+//     //c: D*C
+//     //la: D*C
+//     int x = blockIdx.x * blockDim.x + threadIdx.x;
+//     int y = blockIdx.y * blockDim.y + threadIdx.y;
+    
+//     Dtype Ovalue = 1.0;
+//     if((y >= N) || (x>=C)) return;
+//     for (int i=0; i<D; i++){
+//         Ovalue *= expf(-(powf((in[IDX2D(y, i, D)] - c[IDX2D(i, x, C)]), 2)/(0.0001+2 * la[IDX2D(i, x, C)] * la[IDX2D(i, x, C)])));
+//       }
+//     o[IDX2D(y, x, C)] = Ovalue;
+//     // o[0] = 5.0;
+// }
+
+
+// template <typename Dtype>
+// void CenterLossForward(Dtype* in, Dtype* c, Dtype* gt, Dtype* gts, Dtype* ret, int N, int D, int C,
+//                   cudaStream_t stream) {
+  
+//   int maxNC = max_dim(N, C);
+//   int maxDNC = max_dim(maxNC, D);
+//   MemberShipForwardKernel <Dtype>
+//             <<<cuda_gridsize(maxDNC, maxDNC), cuda_block(), 0, stream>>>(in, c, la, o, N, D, C);
+
+    
+// //   cudaError_t err = cudaGetLastError();
+//   cudaError_t err = cudaDeviceSynchronize();
+//   if (cudaSuccess != err)
+//     throw std::runtime_error(Formatter()
+//                              << "CUDA kernel failed : " << cudaGetErrorString(err));
+// }
+
 template void MemberShipForward<float>(float *in, float *c, float *la, float *o, int N, int D, int C,
                                   cudaStream_t stream);
 

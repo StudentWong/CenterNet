@@ -23,6 +23,7 @@ __pycache__/
 .Python
 env/
 build/
+objs/
 develop-eggs/
 dist/
 downloads/

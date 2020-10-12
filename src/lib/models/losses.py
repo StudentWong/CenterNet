@@ -370,15 +370,62 @@ class CenterLoss_freeze(nn.Module):
   def forward(self, x, c, act):
     return self.center_loss.apply(x, c, act)
 
+# class CenterLoss_gt(nn.Module):
+#     '''nn.Module warpper for focal loss'''
+#
+#     def __init__(self):
+#         super(CenterLoss_gt, self).__init__()
+#         self.center_loss = _menbership_center_loss_gt
+#
+#     def forward(self, x, c, act, gt_hm):
+#         return self.center_loss.apply(x, c, act, gt_hm)
+
 class CenterLoss_gt(nn.Module):
     '''nn.Module warpper for focal loss'''
 
     def __init__(self):
         super(CenterLoss_gt, self).__init__()
-        self.center_loss = _menbership_center_loss_gt
+        # self.center_loss = _menbership_center_loss_gt
 
     def forward(self, x, c, act, gt_hm):
-        return self.center_loss.apply(x, c, act, gt_hm)
+        # x: N*D*(w*h)
+        # c: D*C
+        # activate: N*C*(w*h)
+        # gt_hm: N*C*W*H
+
+        # hidden: N*D*C*(w*h)
+
+        assert x.shape[0] == act.shape[0] \
+               and gt_hm.shape[0] == act.shape[0] \
+               and len(x.shape) == 3
+        N = x.shape[0]
+        assert x.shape[1] == c.shape[0] and len(c.shape) == 2
+        D = x.shape[1]
+        assert c.shape[1] == act.shape[1] and act.shape[1] == gt_hm.shape[1]
+        C = c.shape[1]
+        assert len(act.shape) == 3 \
+               and x.shape[2] == act.shape[2] \
+               and gt_hm.shape[2] * gt_hm.shape[3] == x.shape[2] \
+               and gt_hm.is_contiguous()
+        wh = x.shape[2]
+        gt_hm = gt_hm.view(N, C, wh)
+
+        x_expand = x.unsqueeze(2).expand([N, D, C, wh])
+        c_expand = c.unsqueeze(0).unsqueeze(3).expand([N, D, C, wh])
+        distance = distance_no_sqrt(x_expand, c_expand, dim=1)
+
+        # distance shape: N*C*(w*h)
+        assert distance.shape[0] == N \
+               and distance.shape[1] == C \
+               and distance.shape[2] == wh \
+               and act.shape[0] == N \
+               and act.shape[1] == C \
+               and act.shape[2] == wh
+
+        # loss_N_C_wh = (distance * (1 - act) * gt_hm)
+        loss_N_C_wh = (distance * gt_hm)
+        loss = loss_N_C_wh.sum()
+        return loss
 
 
 class FocalLoss(nn.Module):
