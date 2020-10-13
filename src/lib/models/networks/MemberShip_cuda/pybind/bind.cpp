@@ -19,5 +19,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m){
   m.def("MemberShip_Input_Backward_Wrapper", &MemberShip_Input_Backward_Wrapper<float>);
   m.def("MemberShip_Center_Backward_Wrapper", &MemberShip_Center_Backward_Wrapper<float>);
   m.def("MemberShip_Lamda_Backward_Wrapper", &MemberShip_Lamda_Backward_Wrapper<float>);
+  m.def("CenterLoss_Forward_Wrapper", &CenterLoss_Forward_Wrapper<float>);
 
 }

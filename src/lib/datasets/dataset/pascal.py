@@ -9,7 +9,7 @@ import json
 import os
 
 import torch.utils.data as data
-from src.tools.voc_eval_lib.datasets.pascal_voc import pascal_voc
+from tools.voc_eval_lib.datasets.pascal_voc import pascal_voc
 import pickle
 
 class PascalVOC(data.Dataset):
@@ -109,7 +109,7 @@ class PascalVOC(data.Dataset):
 
     print('Evaluating detections')
     map = imdb.evaluate_detections(nms_dets)
-
+    ret = dict()
     ret['AP'] = map
     ret['AP50'] = 0.0
     ret['AR1'] = 0.0

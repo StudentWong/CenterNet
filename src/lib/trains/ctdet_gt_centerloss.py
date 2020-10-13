@@ -66,6 +66,10 @@ class CtdetLoss_NFS(torch.nn.Module):
       # print(hm_shape)
       hm_loss += self.crit(output['hm'], batch['hm']) / opt.num_stacks
       # print(hm_loss)
+      # print(output['hm'])
+      # print(batch['hm'])
+      # print(self.crit(output['hm'], batch['hm']))
+      # exit()
 
       if opt.center_weight > 0:
         center_loss += self.centerloss(output['ft'].view(ft_shape[0], ft_shape[1], -1),
@@ -187,6 +191,8 @@ class CtdetTrainer_GT_Centerloss(BaseTrainer):
     for iter_id, batch in enumerate(data_loader):
       # print(self.model_with_loss.model.menber_activation.c)
       # print(self.model_with_loss.model.menber_activation.lamda)
+      #['input', 'hm', 'reg_mask', 'ind', 'wh', 'reg', 'meta']
+      # print(batch['input'].shape)
       if iter_id >= num_iters:
         break
       data_time.update(time.time() - end)
@@ -194,7 +200,12 @@ class CtdetTrainer_GT_Centerloss(BaseTrainer):
       for k in batch:
         if k != 'meta':
           batch[k] = batch[k].to(device=opt.device, non_blocking=True)
+      # print(batch)
+      # exit()
       output, loss, loss_stats = model_with_loss(batch)
+      # print(output)
+      # exit()
+      # print(loss)
       loss = loss.mean()
       if phase == 'train':
         self.optimizer.zero_grad()

@@ -552,10 +552,14 @@ class DLASeg_no_bias(nn.Module):
                 # print(z[head])
                 z['ft'] = self.__getattr__(head)(y[-1])
                 origin_shape = z['ft'].shape
+                # print(z['ft'])
                 z[head] = self.menber_activation(
                     z['ft'].view(origin_shape[0], origin_shape[1], origin_shape[2]*origin_shape[3])
                 ).view(origin_shape[0], self.catnum, origin_shape[2], origin_shape[3])
+                # print(self.menber_activation.c)
+                # print(self.menber_activation.lamda)
                 # print(z[head])
+                # exit()
                 z['center'] = self.menber_activation.c
             else:
                 z[head] = self.__getattr__(head)(y[-1])

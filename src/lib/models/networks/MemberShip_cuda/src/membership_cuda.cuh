@@ -13,3 +13,7 @@ void MemberShipCenterBackward(Dtype* c_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype
 template <typename Dtype>
 void MemberShipLamdaBackward(Dtype* la_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* la, Dtype* o, int N, int D, int C,
     cudaStream_t stream);
+
+template <typename Dtype>
+void CenterLossForward(Dtype* in, Dtype* c, Dtype* gt, Dtype* gts, Dtype* ret, int N, int D, int C,
+    cudaStream_t stream);

@@ -172,40 +172,45 @@ at::Tensor in, at::Tensor center, at::Tensor lamda, at::Tensor out) {
 }
 
 
-// template <typename Dtype>
-// void CenterLoss_Forward_Wrapper(at::Tensor in, at::Tensor center, at::Tensor gt, at::Tensor gt_sum) {
+template <typename Dtype>
+at::Tensor CenterLoss_Forward_Wrapper(at::Tensor in, at::Tensor center, at::Tensor gt, at::Tensor gt_sum) {
 
-//   if ( in.dim() != 2 || center.dim() != 2 || gt.dim() != 2 || gt_sum.dim() != 1){
-//     throw std::invalid_argument(Formatter()
-//                               << "Dim error");
-//   }
-//   if ( *(in.sizes().data()) != *(gt.sizes().data()) || *(in.sizes().data()) != *(gt_sum.sizes().data()) ){
-//     throw std::invalid_argument(Formatter()
-//                               << "Size mismatch input N: " << *(in.sizes().data())
-//                               << ", gt N: " << *(gt.sizes().data())
-//                               << ", gt_sum N: " << *(gt_sum.sizes().data()));
-//   }
-//   int sizeN = *(in.sizes().data());
+  if ( in.dim() != 2 || center.dim() != 2 || gt.dim() != 2 || gt_sum.dim() != 1){
+    throw std::invalid_argument(Formatter()
+                              << "Dim error");
+  }
+  if ( *(in.sizes().data()) != *(gt.sizes().data()) || *(in.sizes().data()) != *(gt_sum.sizes().data()) ){
+    throw std::invalid_argument(Formatter()
+                              << "Size mismatch input N: " << *(in.sizes().data())
+                              << ", gt N: " << *(gt.sizes().data())
+                              << ", gt_sum N: " << *(gt_sum.sizes().data()));
+  }
+  int sizeN = *(in.sizes().data());
 
-//   if ( *(in.sizes().data()+1) != *(center.sizes().data()) ){
-//     throw std::invalid_argument(Formatter()
-//                               << "Size mismatch input D: " << *(in.sizes().data()+1)
-//                               << ", center D: " << *(center.sizes().data()));
-//   }
-//   int sizeD = *(in.sizes().data()+1);
+  if ( *(in.sizes().data()+1) != *(center.sizes().data()) ){
+    throw std::invalid_argument(Formatter()
+                              << "Size mismatch input D: " << *(in.sizes().data()+1)
+                              << ", center D: " << *(center.sizes().data()));
+  }
+  int sizeD = *(in.sizes().data()+1);
 
-//   if ( *(gt.sizes().data()+1) != *(center.sizes().data()+1) ){
-//     throw std::invalid_argument(Formatter()
-//                               << "Size mismatch gt C: " << *(gt.sizes().data()+1)
-//                               << ", center C: " << *(center.sizes().data()+1));
-//   }
-//   int sizeC = *(gt.sizes().data()+1);
+  if ( *(gt.sizes().data()+1) != *(center.sizes().data()+1) ){
+    throw std::invalid_argument(Formatter()
+                              << "Size mismatch gt C: " << *(gt.sizes().data()+1)
+                              << ", center C: " << *(center.sizes().data()+1));
+  }
+  int sizeC = *(gt.sizes().data()+1);
+
+  at::Tensor output = at::ones({sizeN, sizeD}, in.options());
+  CenterLossForward<Dtype>(in.data<Dtype>(), center.data<Dtype>(),
+                         gt.data<Dtype>(), gt_sum.data<Dtype>(), output.data<Dtype>(), sizeN, sizeD, sizeC, at::cuda::getCurrentCUDAStream());
+  return output;
   
-//   // out.resize_({sizeN*sizeC});
+  // out.resize_({sizeN*sizeC});
 
-//   CenterLossForward<Dtype>(in.data<Dtype>(), center.data<Dtype>(),
-//                       gt.data<Dtype>(), gt_sum.data<Dtype>(), sizeN, sizeD, sizeC, at::cuda::getCurrentCUDAStream());
-// }
+  // CenterLossForward<Dtype>(in.data<Dtype>(), center.data<Dtype>(),
+  //                     gt.data<Dtype>(), gt_sum.data<Dtype>(), sizeN, sizeD, sizeC, at::cuda::getCurrentCUDAStream());
+}
 
 
 
@@ -217,5 +222,5 @@ at::Tensor in, at::Tensor center, at::Tensor lamda, at::Tensor out);
 template void MemberShip_Lamda_Backward_Wrapper<float>(at::Tensor la_grad, at::Tensor grad_last, 
 at::Tensor in, at::Tensor center, at::Tensor lamda, at::Tensor out);
 
-// template void CenterLoss_Forward_Wrapper<float>(at::Tensor in, at::Tensor center, at::Tensor gt, 
-// at::Tensor gt_sum);
+template at::Tensor CenterLoss_Forward_Wrapper<float>(at::Tensor in, at::Tensor center, at::Tensor gt, 
+at::Tensor gt_sum);
