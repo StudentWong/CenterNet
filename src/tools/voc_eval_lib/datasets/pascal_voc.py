@@ -260,7 +260,7 @@ class pascal_voc(imdb):
     print(('Mean AP = {:.4f}'.format(np.mean(aps))))
     print('~~~~~~~~')
 
-    return aps
+    return np.mean(aps)
     '''
     print('Results:')
     for ap in aps:

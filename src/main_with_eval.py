@@ -95,6 +95,7 @@ def main(opt):
         log_dict_val, preds = trainer.val(epoch, val_loader)
 
       apar = prefetch_test(opt, model)
+      # print(apar)
 
 
       for k, v in log_dict_val.items():

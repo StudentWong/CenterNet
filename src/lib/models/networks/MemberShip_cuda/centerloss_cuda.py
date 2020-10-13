@@ -1,12 +1,9 @@
 import torch
 from torch import nn
-from MembershipBackend import MemberShip_Forward_Wrapper
-from MembershipBackend import MemberShip_Input_Backward_Wrapper
-from MembershipBackend import MemberShip_Center_Backward_Wrapper
-from MembershipBackend import MemberShip_Lamda_Backward_Wrapper
 from MembershipBackend import CenterLoss_Forward_Wrapper
 from MembershipBackend import CenterLoss_Input_Backward_Wrapper
 from MembershipBackend import CenterLoss_Center_Backward_Wrapper
+
 
 class _centerloss_matrix_function(torch.autograd.Function):
     @staticmethod
@@ -97,29 +94,36 @@ class _centerloss_matrix_function(torch.autograd.Function):
         # print(grad_x)
         return grad_x, grad_c, grad_gt, grad_gts
 
-if __name__ == "__main__":
-    N = 3
-    D = 128
-    C = 16
-    wh = 100*100
-    x = torch.rand((N, D, wh), dtype=torch.float).cuda()
-    x.requires_grad_(False)
-    c = torch.rand((D, C), dtype=torch.float).cuda()
-    c.requires_grad_(True)
-    gt = torch.rand((N, C, wh), dtype=torch.float, requires_grad=False).cuda()
-    gts = torch.rand((N, wh), dtype=torch.float, requires_grad=False).cuda()
-    # x = torch.tensor([[1, 2], [3, 4], [5, 6]], dtype=torch.float).cuda()
-    # c = torch.tensor([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=torch.float).cuda()
-    # gt = torch.tensor([[1, 2, 3, 4], [5, 6, 7, 8], [9, 1, 2, 3]], dtype=torch.float).cuda()
-    # gts = torch.tensor([1, 2, 3], dtype=torch.float).cuda()
-    fun = _centerloss_matrix_function
-    opt = torch.optim.Adam([c], lr=1e-2)
-    for i in range(0, 100):
-        opt.zero_grad()
-        y = fun.apply(x, c, gt, gts)
-        l = y.sum()
-        l.backward()
-        opt.step()
-        print(l)
-    # y = CenterLoss_Forward_Wrapper(x, c, gt, gts)
-    print(y.shape)
+
+class CenterLoss_gt_cuda(nn.Module):
+    '''nn.Module warpper for center loss'''
+
+    def __init__(self):
+        super(CenterLoss_gt_cuda, self).__init__()
+        self.center_loss = _centerloss_matrix_function
+
+    def forward(self, x, c, act, gt_hm):
+        # x: N*D*(w*h)
+        # c: D*C
+        # activate: N*C*(w*h)
+        # gt_hm: N*C*W*H
+        assert x.shape[0] == act.shape[0] \
+               and gt_hm.shape[0] == act.shape[0] \
+               and len(x.shape) == 3
+        N = x.shape[0]
+        assert x.shape[1] == c.shape[0] and len(c.shape) == 2
+        D = x.shape[1]
+        assert c.shape[1] == act.shape[1] and act.shape[1] == gt_hm.shape[1]
+        C = c.shape[1]
+        assert len(act.shape) == 3 \
+               and x.shape[2] == act.shape[2] \
+               and gt_hm.shape[2] * gt_hm.shape[3] == x.shape[2] \
+               and gt_hm.is_contiguous()
+        wh = x.shape[2]
+        gt_hm = gt_hm.view(N, C, wh)
+
+        gts = gt_hm.sum(dim=1)
+        num_pos = gt_hm.sum()
+        loss_matrix = self.center_loss.apply(x, c, gt_hm, gts)
+        # print(loss_matrix)
+        return loss_matrix.sum()/num_pos
