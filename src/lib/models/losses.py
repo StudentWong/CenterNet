@@ -423,8 +423,10 @@ class CenterLoss_gt(nn.Module):
                and act.shape[2] == wh
 
         # loss_N_C_wh = (distance * (1 - act) * gt_hm)
-        loss_N_C_wh = (distance * gt_hm)
-        loss = loss_N_C_wh.sum()
+        gt_pos_num = gt_hm.eq(1).float()
+        # loss_N_C_wh = (distance * gt_hm)
+        loss_N_C_wh = (distance * gt_pos_num)
+        loss = loss_N_C_wh.sum()/gt_pos_num.sum()
         return loss
 
 
