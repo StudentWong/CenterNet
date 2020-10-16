@@ -17,6 +17,12 @@ import torch
 import torch.nn as nn
 from .DCNv2.dcn_v2 import DCN
 import torch.utils.model_zoo as model_zoo
+try:
+    from ..membership import Membership_Activation, Membership_norm
+    from .MemberShip_cuda import Membership_norm_cuda
+except:
+    from src.lib.models.membership import Membership_Activation, Membership_norm
+    pass
 
 BN_MOMENTUM = 0.1
 logger = logging.getLogger(__name__)
@@ -155,17 +161,31 @@ class PoseResNet(nn.Module):
         for head in self.heads:
             classes = self.heads[head]
             if head_conv > 0:
-                fc = nn.Sequential(
-                  nn.Conv2d(64, head_conv,
-                    kernel_size=3, padding=1, bias=True),
-                  nn.ReLU(inplace=True),
-                  nn.Conv2d(head_conv, classes, 
-                    kernel_size=1, stride=1, 
-                    padding=0, bias=True))
                 if 'hm' in head:
-                    fc[-1].bias.data.fill_(-2.19)
+                    fc = nn.Sequential(
+                        nn.Conv2d(64, head_conv,
+                                  kernel_size=3, padding=1, bias=True))
+                    fc[-1].bias.data.fill_(0.0)
                 else:
+                    fc = nn.Sequential(
+                        nn.Conv2d(64, head_conv,
+                                  kernel_size=3, padding=1, bias=True),
+                        nn.ReLU(inplace=True),
+                        nn.Conv2d(head_conv, classes,
+                                  kernel_size=1, stride=1,
+                                  padding=0 // 2, bias=True))
                     fill_fc_weights(fc)
+                # fc = nn.Sequential(
+                #   nn.Conv2d(64, head_conv,
+                #     kernel_size=3, padding=1, bias=True),
+                #   nn.ReLU(inplace=True),
+                #   nn.Conv2d(head_conv, classes,
+                #     kernel_size=1, stride=1,
+                #     padding=0, bias=True))
+                # if 'hm' in head:
+                #     fc[-1].bias.data.fill_(-2.19)
+                # else:
+                #     fill_fc_weights(fc)
             else:
                 fc = nn.Conv2d(64, classes, 
                   kernel_size=1, stride=1, 
@@ -175,6 +195,10 @@ class PoseResNet(nn.Module):
                 else:
                     fill_fc_weights(fc)
             self.__setattr__(head, fc)
+
+        self.catnum = heads['hm']
+        # self.menber_activation = Membership_norm(head_conv, heads['hm'])
+        self.menber_activation = Membership_norm_cuda(head_conv, heads['hm'])
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -259,7 +283,22 @@ class PoseResNet(nn.Module):
         x = self.deconv_layers(x)
         ret = {}
         for head in self.heads:
-            ret[head] = self.__getattr__(head)(x)
+            if head == 'hm':
+                # print(z[head])
+                ret['ft'] = self.__getattr__(head)(x)
+                origin_shape = ret['ft'].shape
+                # print(z['ft'])
+                ret[head] = self.menber_activation(
+                    ret['ft'].view(origin_shape[0], origin_shape[1], origin_shape[2]*origin_shape[3])
+                ).view(origin_shape[0], self.catnum, origin_shape[2], origin_shape[3])
+                # print(self.menber_activation.c)
+                # print(self.menber_activation.lamda)
+                # print(z[head])
+                # exit()
+                ret['center'] = self.menber_activation.c
+            else:
+                ret[head] = self.__getattr__(head)(x)
+            # ret[head] = self.__getattr__(head)(x)
         return [ret]
 
     def init_weights(self, num_layers):

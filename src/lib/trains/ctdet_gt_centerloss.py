@@ -8,7 +8,7 @@ import numpy as np
 import time
 from progress.bar import Bar
 from models.losses import FocalLoss, CenterLoss_gt
-from models.networks.MemberShip_cuda.centerloss_cuda import CenterLoss_gt_cuda
+from models.networks.MemberShip_cuda.centerloss_cuda import CenterLoss_gt_cuda, CenterLoss_gt_eq1_cuda
 from utils.utils import AverageMeter
 from models.losses import RegL1Loss, RegLoss, NormRegL1Loss, RegWeightedL1Loss
 from models.decode import ctdet_decode
@@ -23,7 +23,12 @@ class CtdetLoss_NFS(torch.nn.Module):
     super(CtdetLoss_NFS, self).__init__()
     self.crit = torch.nn.MSELoss() if opt.mse_loss else FocalLoss()
     # self.centerloss = CenterLoss_gt()
-    self.centerloss = CenterLoss_gt_cuda()
+    if opt.eq1:
+      print("eq1 is True")
+      self.centerloss = CenterLoss_gt_eq1_cuda()
+    else:
+      print("eq1 is False")
+      self.centerloss = CenterLoss_gt_cuda()
     # self.crit = torch.nn.MSELoss()
     self.crit_reg = RegL1Loss() if opt.reg_loss == 'l1' else \
               RegLoss() if opt.reg_loss == 'sl1' else None

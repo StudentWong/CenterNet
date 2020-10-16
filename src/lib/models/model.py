@@ -15,6 +15,7 @@ from .networks.pose_dla_dcn_freeze_update import get_pose_net_freeze_update as g
 from .networks.resnet_dcn import get_pose_net as get_pose_net_dcn
 from .networks.large_hourglass import get_large_hourglass_net
 from .networks.pose_dla_dcn_gt_centerloss import get_pose_net_gt_centerloss as get_dla_dcn_gt_centerloss
+from .networks.resnet_dcn_gt import get_pose_net as get_res_gt_net_dcn
 
 _model_factory = {
   'res': get_pose_net, # default Resnet with deconv
@@ -24,6 +25,7 @@ _model_factory = {
   'dlaFreezeUpdate': get_dla_dcn_freeze_update,
   'dlagt': get_dla_dcn_gt_centerloss,
   'resdcn': get_pose_net_dcn,
+  'resdcngt': get_res_gt_net_dcn,
   'hourglass': get_large_hourglass_net,
 }
 
@@ -38,7 +40,7 @@ def create_model(arch, heads, head_conv):
   return model
 
 def load_model(model, model_path, optimizer=None, resume=False, 
-               lr=None, lr_step=None):
+               lr=None, lr_step=None, lamda_augment=1.0):
   start_epoch = 0
   checkpoint = torch.load(model_path, map_location=lambda storage, loc: storage)
   print('loaded {}, epoch {}'.format(model_path, checkpoint['epoch']))
@@ -58,7 +60,17 @@ def load_model(model, model_path, optimizer=None, resume=False,
         'pre-trained weight. Please make sure ' + \
         'you have correctly specified --arch xxx ' + \
         'or set the correct --num_classes for your own dataset.'
+  # print(model_state_dict.keys())
+  # exit()
   for k in state_dict:
+    # if k == 'menber_activation.lamda':
+    #   print(state_dict[k])
+    #   exit()
+    #   state_dict[k] = lamda_augment * state_dict[k]
+    # if k == 'menber_activation.c':
+    #   for i in range(0, state_dict[k].shape[0]):
+    #     print(state_dict[k][i])
+    #   exit()
     if k in model_state_dict:
       if state_dict[k].shape != model_state_dict[k].shape:
         print('Skip loading parameter {}, required shape{}, '\

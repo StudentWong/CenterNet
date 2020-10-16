@@ -31,7 +31,10 @@ class opts(object):
                              help='resume an experiment. '
                                   'Reloaded the optimizer parameter and '
                                   'set load_model to model_last.pth '
-                                  'in the exp dir if load_model is empty.') 
+                                  'in the exp dir if load_model is empty.')
+
+    self.parser.add_argument('--eq1', action='store_true',
+                             help='Whether Center Loss only caculate those points whose hm_gt is 1')
 
     # system
     self.parser.add_argument('--gpus', default='0', 

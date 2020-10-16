@@ -225,7 +225,8 @@ __global__ void CenterLossForwardKernel(Dtype* in, Dtype* c, Dtype* gt, Dtype* g
         // Ovalue += expf(-(powf((in[IDX2D(y, i, D)] - c[IDX2D(i, x, C)]), 2)/(0.0001+2 * la[IDX2D(i, x, C)] * la[IDX2D(i, x, C)])));
         Ovalue += powf((in[IDX2D(y, x, D)] - c[IDX2D(x, i, C)]), 2) * gt[IDX2D(y, i, C)];
       }
-    ret[IDX2D(y, x, D)] = Ovalue/(gts[y]+0.00001);
+    // ret[IDX2D(y, x, D)] = Ovalue/(gts[y]+0.00001);
+    ret[IDX2D(y, x, D)] = Ovalue;
     // o[0] = 5.0;
 }
 
@@ -266,10 +267,10 @@ __global__ void CenterLossInputBackwardKernel(Dtype* in_g, Dtype* g_l, Dtype* in
     Dtype Ovalue = 0.0;
     if((y >= N) || (x>=D)) return;
     for (int i=0; i<C; i++){
-        // Ovalue += expf(-(powf((in[IDX2D(y, i, D)] - c[IDX2D(i, x, C)]), 2)/(0.0001+2 * la[IDX2D(i, x, C)] * la[IDX2D(i, x, C)])));
         Ovalue += 2*(in[IDX2D(y, x, D)] - c[IDX2D(x, i, C)]) * gt[IDX2D(y, i, C)];
       }
-      in_g[IDX2D(y, x, D)] = (Ovalue*g_l[IDX2D(y, x, D)])/(gts[y]+0.00001);
+      // in_g[IDX2D(y, x, D)] = (Ovalue*g_l[IDX2D(y, x, D)])/(gts[y]+0.00001);
+      in_g[IDX2D(y, x, D)] = (Ovalue*g_l[IDX2D(y, x, D)]);
     // o[0] = 5.0;
 }
 
@@ -309,8 +310,8 @@ __global__ void CenterLossCenterBackwardKernel(Dtype* c_g, Dtype* g_l, Dtype* in
     Dtype Ovalue = 0.0;
     if((y >= D) || (x>=C)) return;
     for (int i=0; i<N; i++){
-    //     // Ovalue += expf(-(powf((in[IDX2D(y, i, D)] - c[IDX2D(i, x, C)]), 2)/(0.0001+2 * la[IDX2D(i, x, C)] * la[IDX2D(i, x, C)])));
-        Ovalue += (2*(-in[IDX2D(i, y, D)] + c[IDX2D(y, x, C)]) * gt[IDX2D(i, x, C)] * g_l[IDX2D(i, y, D)])/(gts[i]+0.00001);
+        // Ovalue += (2*(-in[IDX2D(i, y, D)] + c[IDX2D(y, x, C)]) * gt[IDX2D(i, x, C)] * g_l[IDX2D(i, y, D)])/(gts[i]+0.00001);
+        Ovalue += (2*(-in[IDX2D(i, y, D)] + c[IDX2D(y, x, C)]) * gt[IDX2D(i, x, C)] * g_l[IDX2D(i, y, D)]);
       }
       c_g[IDX2D(y, x, C)] = Ovalue;
     // o[0] = 5.0;
