@@ -165,7 +165,7 @@ class PoseResNet(nn.Module):
                     fc = nn.Sequential(
                         nn.Conv2d(64, head_conv,
                                   kernel_size=3, padding=1, bias=True))
-                    fc[-1].bias.data.fill_(0.0)
+                    fc[-1].bias.data.fill_(-2.19)
                 else:
                     fc = nn.Sequential(
                         nn.Conv2d(64, head_conv,

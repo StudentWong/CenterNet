@@ -208,31 +208,31 @@ void MemberShipLamdaBackward(Dtype* la_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype
 
 
 template <typename Dtype>
-__global__ void CenterLossForwardKernel(Dtype* in, Dtype* c, Dtype* gt, Dtype* gts, Dtype* ret, int N, int D, int C)
+__global__ void CenterLossForwardKernel(Dtype* in, Dtype* c, Dtype* gt, Dtype* ret, int N, int D, int C)
 {
     //in: N*D
     //c: D*C
     //gt: N*C
     //gts: N
-    //ret: N*D
+    //ret: N*C
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     
     Dtype Ovalue = 0.0;
-    if((y >= N) || (x>=D)) return;
-    for (int i=0; i<C; i++){
+    if((y >= N) || (x>=C)) return;
+    for (int i=0; i<D; i++){
         // Ovalue += expf(-(powf((in[IDX2D(y, i, D)] - c[IDX2D(i, x, C)]), 2)/(0.0001+2 * la[IDX2D(i, x, C)] * la[IDX2D(i, x, C)])));
-        Ovalue += powf((in[IDX2D(y, x, D)] - c[IDX2D(x, i, C)]), 2) * gt[IDX2D(y, i, C)];
+        Ovalue += powf((in[IDX2D(y, i, D)] - c[IDX2D(i, x, C)]), 2) * gt[IDX2D(y, x, C)];
       }
     // ret[IDX2D(y, x, D)] = Ovalue/(gts[y]+0.00001);
-    ret[IDX2D(y, x, D)] = Ovalue;
+    ret[IDX2D(y, x, C)] = Ovalue;
     // o[0] = 5.0;
 }
 
 
 template <typename Dtype>
-void CenterLossForward(Dtype* in, Dtype* c, Dtype* gt, Dtype* gts, Dtype* ret, int N, int D, int C,
+void CenterLossForward(Dtype* in, Dtype* c, Dtype* gt, Dtype* ret, int N, int D, int C,
                   cudaStream_t stream) {
   
   // int maxNC = max_dim(N, C);
@@ -240,7 +240,7 @@ void CenterLossForward(Dtype* in, Dtype* c, Dtype* gt, Dtype* gts, Dtype* ret, i
   int maxdim1 = max_dim(N, D);
   int maxdim2 = max_dim(D, C);
   CenterLossForwardKernel <Dtype>
-            <<<cuda_gridsize(maxdim1, maxdim2), cuda_block(), 0, stream>>>(in, c, gt, gts, ret, N, D, C);
+            <<<cuda_gridsize(maxdim1, maxdim2), cuda_block(), 0, stream>>>(in, c, gt, ret, N, D, C);
 
     
 //   cudaError_t err = cudaGetLastError();
@@ -253,13 +253,13 @@ void CenterLossForward(Dtype* in, Dtype* c, Dtype* gt, Dtype* gts, Dtype* ret, i
 
 
 template <typename Dtype>
-__global__ void CenterLossInputBackwardKernel(Dtype* in_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* gt, Dtype* gts,  int N, int D, int C)
+__global__ void CenterLossInputBackwardKernel(Dtype* in_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* gt, int N, int D, int C)
 {
     //in: N*D
     //c: D*C
     //gt: N*C
     //gts: N
-    //ret: N*D
+    //ret: N*C
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -267,16 +267,18 @@ __global__ void CenterLossInputBackwardKernel(Dtype* in_g, Dtype* g_l, Dtype* in
     Dtype Ovalue = 0.0;
     if((y >= N) || (x>=D)) return;
     for (int i=0; i<C; i++){
-        Ovalue += 2*(in[IDX2D(y, x, D)] - c[IDX2D(x, i, C)]) * gt[IDX2D(y, i, C)];
+        Ovalue += 2*(in[IDX2D(y, x, D)] - c[IDX2D(x, i, C)]) * gt[IDX2D(y, i, C)] * g_l[IDX2D(y, i, C)];
       }
       // in_g[IDX2D(y, x, D)] = (Ovalue*g_l[IDX2D(y, x, D)])/(gts[y]+0.00001);
-      in_g[IDX2D(y, x, D)] = (Ovalue*g_l[IDX2D(y, x, D)]);
-    // o[0] = 5.0;
+      // in_g[IDX2D(y, x, D)] = (Ovalue*g_l[IDX2D(y, x, D)]);
+    in_g[IDX2D(y, x, D)] = Ovalue;
+
+
 }
 
 
 template <typename Dtype>
-void CenterLossInputBackward(Dtype* in_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* gt, Dtype* gts, int N, int D, int C,
+void CenterLossInputBackward(Dtype* in_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* gt, int N, int D, int C,
                   cudaStream_t stream) {
   
   // int maxNC = max_dim(N, C);
@@ -284,7 +286,7 @@ void CenterLossInputBackward(Dtype* in_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype
   int maxdim1 = max_dim(N, D);
   int maxdim2 = max_dim(D, C);
   CenterLossInputBackwardKernel <Dtype>
-            <<<cuda_gridsize(maxdim1, maxdim2), cuda_block(), 0, stream>>>(in_g, g_l, in, c, gt, gts, N, D, C);
+            <<<cuda_gridsize(maxdim1, maxdim2), cuda_block(), 0, stream>>>(in_g, g_l, in, c, gt, N, D, C);
 
     
 //   cudaError_t err = cudaGetLastError();
@@ -296,13 +298,13 @@ void CenterLossInputBackward(Dtype* in_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype
 
 
 template <typename Dtype>
-__global__ void CenterLossCenterBackwardKernel(Dtype* c_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* gt, Dtype* gts,  int N, int D, int C)
+__global__ void CenterLossCenterBackwardKernel(Dtype* c_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* gt, int N, int D, int C)
 {
     //in: N*D
     //c: D*C
     //gt: N*C
     //gts: N
-    //g_l: N*D
+    //g_l: N*C
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -311,7 +313,7 @@ __global__ void CenterLossCenterBackwardKernel(Dtype* c_g, Dtype* g_l, Dtype* in
     if((y >= D) || (x>=C)) return;
     for (int i=0; i<N; i++){
         // Ovalue += (2*(-in[IDX2D(i, y, D)] + c[IDX2D(y, x, C)]) * gt[IDX2D(i, x, C)] * g_l[IDX2D(i, y, D)])/(gts[i]+0.00001);
-        Ovalue += (2*(-in[IDX2D(i, y, D)] + c[IDX2D(y, x, C)]) * gt[IDX2D(i, x, C)] * g_l[IDX2D(i, y, D)]);
+        Ovalue += (2*(-in[IDX2D(i, y, D)] + c[IDX2D(y, x, C)]) * gt[IDX2D(i, x, C)] * g_l[IDX2D(i, x, C)]);
       }
       c_g[IDX2D(y, x, C)] = Ovalue;
     // o[0] = 5.0;
@@ -319,7 +321,7 @@ __global__ void CenterLossCenterBackwardKernel(Dtype* c_g, Dtype* g_l, Dtype* in
 
 
 template <typename Dtype>
-void CenterLossCenterBackward(Dtype* c_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* gt, Dtype* gts, int N, int D, int C,
+void CenterLossCenterBackward(Dtype* c_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype* gt, int N, int D, int C,
                   cudaStream_t stream) {
   
   // int maxNC = max_dim(N, C);
@@ -327,7 +329,7 @@ void CenterLossCenterBackward(Dtype* c_g, Dtype* g_l, Dtype* in, Dtype* c, Dtype
   int maxdim1 = max_dim(N, D);
   int maxdim2 = max_dim(D, C);
   CenterLossCenterBackwardKernel <Dtype>
-            <<<cuda_gridsize(maxdim1, maxdim2), cuda_block(), 0, stream>>>(c_g, g_l, in, c, gt, gts, N, D, C);
+            <<<cuda_gridsize(maxdim1, maxdim2), cuda_block(), 0, stream>>>(c_g, g_l, in, c, gt, N, D, C);
 
     
 //   cudaError_t err = cudaGetLastError();
@@ -349,11 +351,11 @@ template void MemberShipCenterBackward<float>(float* c_g, float* g_l, float* in,
 template void MemberShipLamdaBackward<float>(float* la_g, float* g_l, float* in, float* c, float* la, float* o, int N, int D, int C,
                                   cudaStream_t stream);
 
-template void CenterLossForward<float>(float* in, float* c, float* gt, float* gts, float* ret, int N, int D, int C,
+template void CenterLossForward<float>(float* in, float* c, float* gt, float* ret, int N, int D, int C,
                                     cudaStream_t stream);
 
-template void CenterLossInputBackward<float>(float* in_g, float* g_l, float* in, float* c, float* gt, float* gts, int N, int D, int C,
+template void CenterLossInputBackward<float>(float* in_g, float* g_l, float* in, float* c, float* gt, int N, int D, int C,
                                     cudaStream_t stream);
 
-template void CenterLossCenterBackward<float>(float* c_g, float* g_l, float* in, float* c, float* gt, float* gts, int N, int D, int C,
+template void CenterLossCenterBackward<float>(float* c_g, float* g_l, float* in, float* c, float* gt, int N, int D, int C,
                                     cudaStream_t stream);

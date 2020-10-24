@@ -426,8 +426,12 @@ class CenterLoss_gt(nn.Module):
         gt_pos_num = gt_hm.eq(1).float()
         # loss_N_C_wh = (distance * gt_hm)
         loss_N_C_wh = (distance * gt_pos_num)
-        loss = loss_N_C_wh.sum()/gt_pos_num.sum()
-        return loss
+
+        # loss = loss_N_C_wh.sum()/gt_pos_num.sum()
+        loss = loss_N_C_wh.sum(dim=(0, 2)) / gt_pos_num.sum(dim=(0, 2))
+        # print(loss.shape)
+
+        return loss.sum()
 
 
 class FocalLoss(nn.Module):

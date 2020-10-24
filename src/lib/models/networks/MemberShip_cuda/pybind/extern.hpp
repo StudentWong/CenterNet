@@ -14,12 +14,12 @@ template <typename Dtype>
 at::Tensor in, at::Tensor center, at::Tensor lamda, at::Tensor out);
 
 template <typename Dtype>
-at::Tensor CenterLoss_Forward_Wrapper(at::Tensor in, at::Tensor center, at::Tensor gt, at::Tensor gt_sum);
+at::Tensor CenterLoss_Forward_Wrapper(at::Tensor in, at::Tensor center, at::Tensor gt);
 
 template <typename Dtype>
 void CenterLoss_Input_Backward_Wrapper(at::Tensor in_grad, at::Tensor grad_last, at::Tensor in, 
-at::Tensor center, at::Tensor gt, at::Tensor gt_sum) ;
+at::Tensor center, at::Tensor gt) ;
 
 template <typename Dtype>
 void CenterLoss_Center_Backward_Wrapper(at::Tensor c_grad, at::Tensor grad_last, at::Tensor in, 
-at::Tensor center, at::Tensor gt, at::Tensor gt_sum);
+at::Tensor center, at::Tensor gt);

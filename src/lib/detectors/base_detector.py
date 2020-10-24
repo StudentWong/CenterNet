@@ -14,7 +14,7 @@ from utils.debugger import Debugger
 
 
 class BaseDetector(object):
-  def __init__(self, opt, train_eval=False, model=None):
+  def __init__(self, opt, train_eval=False, model=None, save_ft=True):
     if opt.gpus[0] >= 0:
       opt.device = torch.device('cuda')
     else:

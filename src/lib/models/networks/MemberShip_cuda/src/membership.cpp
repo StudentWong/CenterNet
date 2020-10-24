@@ -173,17 +173,16 @@ at::Tensor in, at::Tensor center, at::Tensor lamda, at::Tensor out) {
 
 
 template <typename Dtype>
-at::Tensor CenterLoss_Forward_Wrapper(at::Tensor in, at::Tensor center, at::Tensor gt, at::Tensor gt_sum) {
+at::Tensor CenterLoss_Forward_Wrapper(at::Tensor in, at::Tensor center, at::Tensor gt) {
 
-  if ( in.dim() != 2 || center.dim() != 2 || gt.dim() != 2 || gt_sum.dim() != 1){
+  if ( in.dim() != 2 || center.dim() != 2 || gt.dim() != 2){
     throw std::invalid_argument(Formatter()
                               << "Dim error");
   }
-  if ( *(in.sizes().data()) != *(gt.sizes().data()) || *(in.sizes().data()) != *(gt_sum.sizes().data()) ){
+  if ( *(in.sizes().data()) != *(gt.sizes().data()) ){
     throw std::invalid_argument(Formatter()
                               << "Size mismatch input N: " << *(in.sizes().data())
-                              << ", gt N: " << *(gt.sizes().data())
-                              << ", gt_sum N: " << *(gt_sum.sizes().data()));
+                              << ", gt N: " << *(gt.sizes().data()));
   }
   int sizeN = *(in.sizes().data());
 
@@ -201,9 +200,9 @@ at::Tensor CenterLoss_Forward_Wrapper(at::Tensor in, at::Tensor center, at::Tens
   }
   int sizeC = *(gt.sizes().data()+1);
 
-  at::Tensor output = at::ones({sizeN, sizeD}, in.options());
+  at::Tensor output = at::ones({sizeN, sizeC}, in.options());
   CenterLossForward<Dtype>(in.data<Dtype>(), center.data<Dtype>(),
-                         gt.data<Dtype>(), gt_sum.data<Dtype>(), output.data<Dtype>(), sizeN, sizeD, sizeC, at::cuda::getCurrentCUDAStream());
+                         gt.data<Dtype>(), output.data<Dtype>(), sizeN, sizeD, sizeC, at::cuda::getCurrentCUDAStream());
   return output;
   
   // out.resize_({sizeN*sizeC});
@@ -214,41 +213,40 @@ at::Tensor CenterLoss_Forward_Wrapper(at::Tensor in, at::Tensor center, at::Tens
 
 
 template <typename Dtype>
-void CenterLoss_Input_Backward_Wrapper(at::Tensor in_grad, at::Tensor grad_last, at::Tensor in, at::Tensor center, at::Tensor gt, at::Tensor gt_sum) {
+void CenterLoss_Input_Backward_Wrapper(at::Tensor in_grad, at::Tensor grad_last, at::Tensor in, at::Tensor center, at::Tensor gt) {
 
-  if ( in_grad.dim() != 2 || grad_last.dim() != 2 || in.dim() != 2 || center.dim() != 2 || gt.dim() != 2 || gt_sum.dim() != 1){
+  if ( in_grad.dim() != 2 || grad_last.dim() != 2 || in.dim() != 2 || center.dim() != 2 || gt.dim() != 2){
     throw std::invalid_argument(Formatter()
                               << "Dim error");
   }
-  if ( *(in.sizes().data()) != *(gt.sizes().data()) || *(in.sizes().data()) != *(gt_sum.sizes().data()) || *(in_grad.sizes().data()) != *(gt.sizes().data()) || *(grad_last.sizes().data()) != *(gt.sizes().data()) ){
+  if ( *(in.sizes().data()) != *(gt.sizes().data()) || *(in_grad.sizes().data()) != *(gt.sizes().data()) || *(grad_last.sizes().data()) != *(gt.sizes().data()) ){
     throw std::invalid_argument(Formatter()
                               << "Size mismatch input N: " << *(in.sizes().data())
                               << "in_grad N: " << *(in_grad.sizes().data())
                               << "grad_last N: " << *(grad_last.sizes().data())
-                              << ", gt N: " << *(gt.sizes().data())
-                              << ", gt_sum N: " << *(gt_sum.sizes().data()));
+                              << ", gt N: " << *(gt.sizes().data()));
   }
   int sizeN = *(in.sizes().data());
 
-  if ( *(in.sizes().data()+1) != *(center.sizes().data()) || *(in_grad.sizes().data()+1) != *(center.sizes().data()) || *(grad_last.sizes().data()+1) != *(center.sizes().data()) ){
+  if ( *(in.sizes().data()+1) != *(center.sizes().data()) || *(in_grad.sizes().data()+1) != *(center.sizes().data()) ){
     throw std::invalid_argument(Formatter()
                               << "Size mismatch input D: " << *(in.sizes().data()+1)
                               << ", center D: " << *(center.sizes().data())
-                              << ", input_grad D: " << *(in_grad.sizes().data()+1)
-                              << ", grad_last D: " << *(grad_last.sizes().data()+1));
+                              << ", input_grad D: " << *(in_grad.sizes().data()+1));
   }
   int sizeD = *(in.sizes().data()+1);
 
-  if ( *(gt.sizes().data()+1) != *(center.sizes().data()+1) ){
+  if ( *(gt.sizes().data()+1) != *(center.sizes().data()+1) || *(grad_last.sizes().data()+1) != *(center.sizes().data()+1) ){
     throw std::invalid_argument(Formatter()
                               << "Size mismatch gt C: " << *(gt.sizes().data()+1)
-                              << ", center C: " << *(center.sizes().data()+1));
+                              << ", center C: " << *(center.sizes().data()+1)
+                              << ", grad_last C: " << *(grad_last.sizes().data()+1));
   }
   int sizeC = *(gt.sizes().data()+1);
 
 
   CenterLossInputBackward<Dtype>(in_grad.data<Dtype>(), grad_last.data<Dtype>(), in.data<Dtype>(), center.data<Dtype>(),
-                         gt.data<Dtype>(), gt_sum.data<Dtype>(), sizeN, sizeD, sizeC, at::cuda::getCurrentCUDAStream());
+                         gt.data<Dtype>(), sizeN, sizeD, sizeC, at::cuda::getCurrentCUDAStream());
   
   // out.resize_({sizeN*sizeC});
 
@@ -258,41 +256,40 @@ void CenterLoss_Input_Backward_Wrapper(at::Tensor in_grad, at::Tensor grad_last,
 
 
 template <typename Dtype>
-void CenterLoss_Center_Backward_Wrapper(at::Tensor c_grad, at::Tensor grad_last, at::Tensor in, at::Tensor center, at::Tensor gt, at::Tensor gt_sum) {
+void CenterLoss_Center_Backward_Wrapper(at::Tensor c_grad, at::Tensor grad_last, at::Tensor in, at::Tensor center, at::Tensor gt) {
 
-  if ( c_grad.dim() != 2 || grad_last.dim() != 2 || in.dim() != 2 || center.dim() != 2 || gt.dim() != 2 || gt_sum.dim() != 1){
+  if ( c_grad.dim() != 2 || grad_last.dim() != 2 || in.dim() != 2 || center.dim() != 2 || gt.dim() != 2){
     throw std::invalid_argument(Formatter()
                               << "Dim error");
   }
-  if ( *(in.sizes().data()) != *(gt.sizes().data()) || *(in.sizes().data()) != *(gt_sum.sizes().data()) || *(grad_last.sizes().data()) != *(gt.sizes().data()) ){
+  if ( *(in.sizes().data()) != *(gt.sizes().data()) || *(grad_last.sizes().data()) != *(gt.sizes().data()) ){
     throw std::invalid_argument(Formatter()
                               << "Size mismatch input N: " << *(in.sizes().data())
                               << "grad_last N: " << *(grad_last.sizes().data())
-                              << ", gt N: " << *(gt.sizes().data())
-                              << ", gt_sum N: " << *(gt_sum.sizes().data()));
+                              << ", gt N: " << *(gt.sizes().data()));
   }
   int sizeN = *(in.sizes().data());
 
-  if ( *(in.sizes().data()+1) != *(center.sizes().data()) || *(c_grad.sizes().data()) != *(center.sizes().data()) || *(grad_last.sizes().data()+1) != *(center.sizes().data()) ){
+  if ( *(in.sizes().data()+1) != *(center.sizes().data()) || *(c_grad.sizes().data()) != *(center.sizes().data()) ){
     throw std::invalid_argument(Formatter()
                               << "Size mismatch input D: " << *(in.sizes().data()+1)
                               << ", center D: " << *(center.sizes().data())
-                              << ", c_grad D: " << *(c_grad.sizes().data())
-                              << ", grad_last D: " << *(grad_last.sizes().data()+1));
+                              << ", c_grad D: " << *(c_grad.sizes().data()));
   }
   int sizeD = *(in.sizes().data()+1);
 
-  if ( *(gt.sizes().data()+1) != *(center.sizes().data()+1) || *(gt.sizes().data()+1) != *(c_grad.sizes().data()+1) ){
+  if ( *(gt.sizes().data()+1) != *(center.sizes().data()+1) || *(gt.sizes().data()+1) != *(c_grad.sizes().data()+1) || *(grad_last.sizes().data()+1) != *(c_grad.sizes().data()+1)){
     throw std::invalid_argument(Formatter()
                               << "Size mismatch gt C: " << *(gt.sizes().data()+1)
                               << ", center C: " << *(center.sizes().data()+1)
-                              << ", c_grad C: " << *(c_grad.sizes().data()+1));
+                              << ", c_grad C: " << *(c_grad.sizes().data()+1)
+                              << ", grad_last C: " <<*(grad_last.sizes().data()+1));
   }
   int sizeC = *(gt.sizes().data()+1);
 
 
   CenterLossCenterBackward<Dtype>(c_grad.data<Dtype>(), grad_last.data<Dtype>(), in.data<Dtype>(), center.data<Dtype>(),
-                         gt.data<Dtype>(), gt_sum.data<Dtype>(), sizeN, sizeD, sizeC, at::cuda::getCurrentCUDAStream());
+                         gt.data<Dtype>(), sizeN, sizeD, sizeC, at::cuda::getCurrentCUDAStream());
   
   // out.resize_({sizeN*sizeC});
 
@@ -309,11 +306,10 @@ at::Tensor in, at::Tensor center, at::Tensor lamda, at::Tensor out);
 template void MemberShip_Lamda_Backward_Wrapper<float>(at::Tensor la_grad, at::Tensor grad_last, 
 at::Tensor in, at::Tensor center, at::Tensor lamda, at::Tensor out);
 
-template at::Tensor CenterLoss_Forward_Wrapper<float>(at::Tensor in, at::Tensor center, at::Tensor gt, 
-at::Tensor gt_sum);
+template at::Tensor CenterLoss_Forward_Wrapper<float>(at::Tensor in, at::Tensor center, at::Tensor gt);
 
 template void CenterLoss_Input_Backward_Wrapper<float>(at::Tensor in_grad, at::Tensor grad_last, at::Tensor in, 
-at::Tensor center, at::Tensor gt, at::Tensor gt_sum);
+at::Tensor center, at::Tensor gt);
 
 template void CenterLoss_Center_Backward_Wrapper<float>(at::Tensor c_grad, at::Tensor grad_last, at::Tensor in, 
-at::Tensor center, at::Tensor gt, at::Tensor gt_sum);
+at::Tensor center, at::Tensor gt);
