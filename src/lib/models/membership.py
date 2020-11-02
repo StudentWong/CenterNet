@@ -11,6 +11,7 @@ zero_clip = 1e-6
 def norm_grad(input, max_norm):
     if input.requires_grad:
         def norm_hook(grad):
+            #print(grad.max())
             N = grad.size(0) # batch number
             norm = grad.contiguous().view(N, -1).norm(p=2, dim=1) + 1e-6
             scale = (norm / max_norm).clamp(min=1).view([N]+[1]*(grad.dim()-1))
@@ -56,7 +57,7 @@ class Membership_Activation(nn.Module):
         assert len(input.shape) == 3
         wh = input.shape[2]
         input_expand = input.unsqueeze(2).expand([N, D, C, wh])
-
+        
         c_expand = self.c.unsqueeze(0).unsqueeze(3).expand_as(input_expand)
         lamda_expand = self.lamda.unsqueeze(0).unsqueeze(3).expand_as(input_expand)
         lamda_valid_flag = lamda_expand>0.0
@@ -177,6 +178,84 @@ class Membership_norm(nn.Module):
 
         return output.clamp(min=zero_clip)
 
+
+
+class Membership_custom(nn.Module):
+    def __init__(self, feature, class_num, init_c=None, init_lamda=None, init_a=None, c_grad=True, lamda_grad=True, a_grad=True):
+        super(Membership_custom, self).__init__()
+
+        if init_c is None:
+            self.c = nn.Parameter(data=0.0*torch.ones((feature, class_num), dtype=torch.float),
+                                  requires_grad=c_grad)
+        else:
+            assert len(init_c.shape) == 2 and \
+                   init_c.shape[0] == feature and \
+                   init_c.shape[1] == class_num
+            self.c = nn.Parameter(data=init_c, requires_grad=c_grad)
+
+        if init_a is None:
+            self.a = nn.Parameter(data=0.8*torch.ones((feature, class_num), dtype=torch.float),
+                                  requires_grad=a_grad)
+        else:
+            assert len(init_a.shape) == 2 and \
+                   init_a.shape[0] == feature and \
+                   init_a.shape[1] == class_num
+            self.a = nn.Parameter(data=init_a, requires_grad=a_grad)
+
+        if init_lamda is None:
+            self.lamda = nn.Parameter(data=4.0*torch.ones((feature, class_num), dtype=torch.float),
+                                      requires_grad=lamda_grad)
+        else:
+            assert len(init_lamda.shape) == 2 and \
+                   init_lamda.shape[0] == feature and \
+                   init_lamda.shape[1] == class_num
+            self.lamda = nn.Parameter(data=init_lamda, requires_grad=lamda_grad)
+
+    def forward(self, input):
+        # input shape: N*D*(w*h)
+        # c shape: D*C
+        # lamda shape : D*C
+        # output: N*C*(w*h)
+
+        N = input.shape[0]
+        assert input.shape[1] == self.c.shape[0] and self.c.shape[0] == self.lamda.shape[0]
+        D = input.shape[1]
+        assert self.c.shape[1] == self.lamda.shape[1]
+        C = self.c.shape[1]
+        assert len(input.shape) == 3
+        wh = input.shape[2]
+        input_expand = input.unsqueeze(2).expand([N, D, C, wh])
+
+        c_expand = self.c.unsqueeze(0).unsqueeze(3).expand_as(input_expand)
+        lamda_expand = self.lamda.unsqueeze(0).unsqueeze(3).expand_as(input_expand)
+        a_expand = self.a.unsqueeze(0).unsqueeze(3).expand_as(input_expand)
+        # print(input_expand.shape)
+        # out = (-((input_expand - c_expand)**2)/(2 * (lamda_expand**2))).exp()
+        # print(input)
+        # out = 1/(
+        #     (1+(((input_expand+(a_expand**2)+c_expand)/(-2*(lamda_expand**2))).exp())) * (1+(((input_expand-(a_expand**2)+c_expand)/(2*(lamda_expand**2))).exp()))
+        #     )
+        # out = (1/(1+((-(input_expand+(a_expand**2)+c_expand)/(2*(lamda_expand**2))).exp()))) * (1/(1+(((input_expand-(a_expand**2)+c_expand)/(2*(lamda_expand**2))).exp())))
+        # print(input_expand)
+        # norm_grad(input_expand,1)
+        # norm_grad(a_expand,1)
+        # norm_grad(c_expand,1)
+        # norm_grad(lamda_expand,1)
+        out = (1/(1+torch.exp(-(input_expand+(a_expand**2)+c_expand)/(2*(lamda_expand**2)))))*(1/(1+torch.exp((input_expand-(a_expand**2)+c_expand)/(2*(lamda_expand**2)))))
+        
+        # print(self.c)
+        # norm_grad(out,1)
+        # first = checkpoint(norm_first_layer, input_expand, c_expand)
+        # second = checkpoint(norm_second_layer, lamda_expand)
+        # out = checkpoint(norm_third_layer, first, second)
+        # print(out)
+        out = (out+0.2).clamp(max=0.99999)
+        output = out.prod(dim=1)
+        # norm_grad(output,1)
+        # print(output.max())
+        # print(output.min())
+        # print(output)
+        return output.clamp(min=1e-64)
 
 class Membership_freeze(nn.Module):
     def __init__(self):

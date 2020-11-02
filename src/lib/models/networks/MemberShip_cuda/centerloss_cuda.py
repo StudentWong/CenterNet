@@ -120,10 +120,13 @@ class CenterLoss_gt_cuda(nn.Module):
         # gt_hm = gt_hm.eq(1).float()
 
         num_pos_cls = gt_hm.sum(dim=(0, 2))
+        #print(num_pos_cls.sum())
         loss_matrix = self.center_loss.apply(x, c, gt_hm)
         loss_matrix_cls = loss_matrix.sum(dim=(0, 2))
+        #print(loss_matrix_cls.sum())
+        #exit()
         # print(loss_matrix.shape)
-        return (loss_matrix_cls/(num_pos_cls+1e-5)).sum()
+        return (loss_matrix_cls/(num_pos_cls+1e-5)).mean()
 
     # loss_matrix = self.center_loss.apply(x, c, gt_hm, gts)
     # # print(loss_matrix.shape)
@@ -162,8 +165,11 @@ class CenterLoss_gt_eq1_cuda(nn.Module):
 
         gt_hm = gt_hm.eq(1).float()
 
-        gts = gt_hm.sum(dim=1)
-        num_pos = gt_hm.sum()
-        loss_matrix = self.center_loss.apply(x, c, gt_hm, gts)
-        # print(loss_matrix)
-        return loss_matrix.sum()/num_pos
+        num_pos_cls = gt_hm.sum(dim=(0, 2))
+        #print(num_pos_cls.sum())
+        loss_matrix = self.center_loss.apply(x, c, gt_hm)
+        loss_matrix_cls = loss_matrix.sum(dim=(0, 2))
+        #print(loss_matrix_cls.sum())
+        #exit()
+        # print(loss_matrix.shape)
+        return (loss_matrix_cls/(num_pos_cls+1e-5)).mean()

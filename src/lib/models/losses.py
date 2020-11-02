@@ -18,6 +18,7 @@ import torch.nn.functional as F
 
 min_clip = 1e-6
 
+
 def _slow_neg_loss(pred, gt):
   '''focal loss from CornerNet'''
 
@@ -58,34 +59,41 @@ def _neg_loss(pred, gt):
   # print(pred.shape)
   # print(gt.shape)
   # exit()
+
+  # norm_grad(pred,1)
+
   pos_inds = gt.eq(1).float()
   neg_inds = gt.lt(1).float()
 
   neg_weights = torch.pow(1 - gt, 4)
-
+  # norm_grad(neg_weights,1)
   loss = 0
 
   pos_loss = torch.log(pred) * torch.pow(1 - pred, 2) * pos_inds
   neg_loss = torch.log(1 - pred) * torch.pow(pred, 2) * neg_weights * neg_inds
+  
+  # norm_grad(pos_loss,1)
+  #num_pos_cls = pos_inds.float().sum(dim=(0, 2, 3))
+  #pos_loss = pos_loss.sum(dim=(0, 2, 3))
+  #neg_loss = neg_loss.sum(dim=(0, 2, 3))
 
-  # print(torch.log(pred) * torch.pow(1 - pred, 2))
-  # print(pos_loss.max())
-  # print(pos_loss.min())
-  # exit()
+  #loss = loss - ((pos_loss + neg_loss) / (num_pos_cls+1e-5)).mean()
+  #return loss
+
+
 
   num_pos  = pos_inds.float().sum()
   pos_loss = pos_loss.sum()
   neg_loss = neg_loss.sum()
 
-  # print(num_pos)
-  # print(pos_loss)
-  # print(neg_loss)
-  # exit()
+
 
   if num_pos == 0:
     loss = loss - neg_loss
   else:
     loss = loss - (pos_loss + neg_loss) / num_pos
+  
+  # norm_grad_1d(loss,1)
   return loss
 
 def _not_faster_neg_loss(pred, gt):

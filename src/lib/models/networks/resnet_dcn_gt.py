@@ -18,7 +18,7 @@ import torch.nn as nn
 from .DCNv2.dcn_v2 import DCN
 import torch.utils.model_zoo as model_zoo
 try:
-    from ..membership import Membership_Activation, Membership_norm
+    from ..membership import Membership_Activation, Membership_norm, Membership_custom
     from .MemberShip_cuda import Membership_norm_cuda
 except:
     from src.lib.models.membership import Membership_Activation, Membership_norm
@@ -164,8 +164,10 @@ class PoseResNet(nn.Module):
                 if 'hm' in head:
                     fc = nn.Sequential(
                         nn.Conv2d(64, head_conv,
-                                  kernel_size=3, padding=1, bias=True))
-                    fc[-1].bias.data.fill_(-2.19)
+                                  kernel_size=3, padding=1, bias=True), 
+                                  nn.BatchNorm2d(head_conv, momentum=BN_MOMENTUM,affine=False))
+                    fc[0].bias.data.fill_(-2.19)
+                    
                 else:
                     fc = nn.Sequential(
                         nn.Conv2d(64, head_conv,
@@ -198,6 +200,7 @@ class PoseResNet(nn.Module):
 
         self.catnum = heads['hm']
         # self.menber_activation = Membership_norm(head_conv, heads['hm'])
+        # self.menber_activation = Membership_custom(head_conv, heads['hm'])
         self.menber_activation = Membership_norm_cuda(head_conv, heads['hm'])
 
     def _make_layer(self, block, planes, blocks, stride=1):

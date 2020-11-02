@@ -28,6 +28,7 @@ class BaseDetector(object):
       self.model.eval()
     else:
       self.model = model
+      self.model.eval()
 
     self.mean = np.array(opt.mean, dtype=np.float32).reshape(1, 1, 3)
     self.std = np.array(opt.std, dtype=np.float32).reshape(1, 1, 3)
