@@ -40,7 +40,7 @@ class CtdetLoss_NFS(torch.nn.Module):
 
   def forward(self, outputs, batch):
     opt = self.opt
-    center_loss, hm_loss, wh_loss, off_loss = 0, 0, 0, 0
+    center_loss, hm_loss, wh_loss, off_loss, regular_loss = 0, 0, 0, 0, 0
     for s in range(opt.num_stacks):
       output = outputs[s]
       if not opt.mse_loss:
@@ -77,6 +77,8 @@ class CtdetLoss_NFS(torch.nn.Module):
       # print(batch['hm'])
       # print(self.crit(output['hm'], batch['hm']))
       # exit()
+      if opt.lamda_regular_weight > 0:
+        regular_loss -= output['lamda'].mean()
 
       if opt.center_weight > 0:
         center_loss += self.centerloss(output['ft'].view(ft_shape[0], ft_shape[1], -1),
@@ -105,9 +107,9 @@ class CtdetLoss_NFS(torch.nn.Module):
                              batch['ind'], batch['reg']) / opt.num_stacks
         
     loss = opt.hm_weight * hm_loss + opt.wh_weight * wh_loss + \
-           opt.off_weight * off_loss + opt.center_weight * center_loss
+           opt.off_weight * off_loss + opt.center_weight * center_loss + opt.lamda_regular_weight*regular_loss
     loss_stats = {'loss': loss, 'hm_loss': hm_loss,
-                  'wh_loss': wh_loss, 'off_loss': off_loss, 'center_loss': center_loss}
+                  'wh_loss': wh_loss, 'off_loss': off_loss, 'center_loss': center_loss, 'lamda_regular': regular_loss}
     return loss, loss_stats
 
 
@@ -125,6 +127,8 @@ class CtdetTrainer_GT_Centerloss(BaseTrainer):
       loss_states = loss_states + ['off_loss']
     if opt.center_weight > 0:
       loss_states = loss_states + ['center_loss']
+    if opt.lamda_regular_weight > 0:
+      loss_states = loss_states + ['lamda_regular']
 
     loss = CtdetLoss_NFS(opt)
     return loss_states, loss

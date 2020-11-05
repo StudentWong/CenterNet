@@ -170,6 +170,7 @@ class opts(object):
     self.parser.add_argument('--wh_weight', type=float, default=0.1,
                              help='loss weight for bounding box size.')
     self.parser.add_argument('--center_weight', type=float, default=0.1)
+    self.parser.add_argument('--lamda_regular_weight', type=float, default=0.2)
     # multi_pose
     self.parser.add_argument('--hp_weight', type=float, default=1,
                              help='loss weight for human pose offset.')

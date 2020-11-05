@@ -24,6 +24,9 @@ except:
     from src.lib.models.membership import Membership_Activation, Membership_norm
     pass
 
+# norm_fun = nn.BatchNorm2d
+# norm_fun = nn.GroupNorm
+# norm = 'batch'
 BN_MOMENTUM = 0.1
 logger = logging.getLogger(__name__)
 
@@ -163,9 +166,12 @@ class PoseResNet(nn.Module):
             if head_conv > 0:
                 if 'hm' in head:
                     fc = nn.Sequential(
+                        # nn.Conv2d(64, head_conv,
+                        #           kernel_size=3, padding=1, bias=True), 
+                        #           nn.BatchNorm2d(head_conv, momentum=BN_MOMENTUM,affine=False))
                         nn.Conv2d(64, head_conv,
                                   kernel_size=3, padding=1, bias=True), 
-                                  nn.BatchNorm2d(head_conv, momentum=BN_MOMENTUM,affine=False))
+                                  nn.GroupNorm(8, head_conv, affine=False))
                     fc[0].bias.data.fill_(-2.19)
                     
                 else:
@@ -299,6 +305,7 @@ class PoseResNet(nn.Module):
                 # print(z[head])
                 # exit()
                 ret['center'] = self.menber_activation.c
+                ret['lamda'] = self.menber_activation.lamda
             else:
                 ret[head] = self.__getattr__(head)(x)
             # ret[head] = self.__getattr__(head)(x)
