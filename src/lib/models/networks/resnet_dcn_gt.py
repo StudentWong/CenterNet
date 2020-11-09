@@ -166,12 +166,12 @@ class PoseResNet(nn.Module):
             if head_conv > 0:
                 if 'hm' in head:
                     fc = nn.Sequential(
-                        # nn.Conv2d(64, head_conv,
-                        #           kernel_size=3, padding=1, bias=True), 
-                        #           nn.BatchNorm2d(head_conv, momentum=BN_MOMENTUM,affine=False))
                         nn.Conv2d(64, head_conv,
                                   kernel_size=3, padding=1, bias=True), 
-                                  nn.GroupNorm(8, head_conv, affine=False))
+                                  nn.BatchNorm2d(head_conv, momentum=BN_MOMENTUM,affine=False))
+                        # nn.Conv2d(64, head_conv,
+                        #           kernel_size=3, padding=1, bias=True), 
+                        #           nn.GroupNorm(8, head_conv, affine=False))
                     fc[0].bias.data.fill_(-2.19)
                     
                 else:
