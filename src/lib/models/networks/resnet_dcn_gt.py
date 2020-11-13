@@ -168,7 +168,7 @@ class PoseResNet(nn.Module):
                     fc = nn.Sequential(
                         nn.Conv2d(64, head_conv,
                                   kernel_size=3, padding=1, bias=True), 
-                                  nn.BatchNorm2d(head_conv, momentum=BN_MOMENTUM,affine=False))
+                                  nn.BatchNorm2d(head_conv, momentum=BN_MOMENTUM, affine=False))
                         # nn.Conv2d(64, head_conv,
                         #           kernel_size=3, padding=1, bias=True), 
                         #           nn.GroupNorm(8, head_conv, affine=False))

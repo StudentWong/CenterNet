@@ -159,8 +159,8 @@ class PoseResNet(nn.Module):
                   nn.Conv2d(64, head_conv,
                     kernel_size=3, padding=1, bias=True),
                   nn.ReLU(inplace=True),
-                  nn.Conv2d(head_conv, classes, 
-                    kernel_size=1, stride=1, 
+                  nn.Conv2d(head_conv, classes,
+                    kernel_size=1, stride=1,
                     padding=0, bias=True))
                 if 'hm' in head:
                     fc[-1].bias.data.fill_(-2.19)
@@ -259,7 +259,14 @@ class PoseResNet(nn.Module):
         x = self.deconv_layers(x)
         ret = {}
         for head in self.heads:
-            ret[head] = self.__getattr__(head)(x)
+            if head == 'hm':
+                xx = self.__getattr__(head)[0](x)
+                ret['ft'] = self.__getattr__(head)[1](xx)
+                # print(self.__getattr__(head).__len__())
+                # exit()
+                ret[head] = self.__getattr__(head)[2](ret['ft'])
+            else:
+                ret[head] = self.__getattr__(head)(x)
         return [ret]
 
     def init_weights(self, num_layers):
