@@ -90,6 +90,7 @@ class BaseDetector(object):
                         theme=self.opt.debugger_theme)
     start_time = time.time()
     pre_processed = False
+
     if isinstance(image_or_path_or_tensor, np.ndarray):
       image = image_or_path_or_tensor
     elif type(image_or_path_or_tensor) == type (''): 
@@ -128,12 +129,14 @@ class BaseDetector(object):
         self.debug(debugger, images, dets, output, scale)
       
       dets = self.post_process(dets, meta, scale)
+      # print(dets)
+      # exit()
       torch.cuda.synchronize()
       post_process_time = time.time()
       post_time += post_process_time - decode_time
 
       detections.append(dets)
-    
+
     results = self.merge_outputs(detections)
     torch.cuda.synchronize()
     end_time = time.time()

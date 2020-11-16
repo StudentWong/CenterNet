@@ -14,6 +14,7 @@ train_factory = {
   'exdet': ExdetTrainer, 
   'ddd': DddTrainer,
   'ctdet': CtdetTrainer,
+  'ctdetfusion': CtdetTrainer,
   'ctdetnfs': CtdetTrainer_NFS,
   'ctdetfreeze': CtdetTrainer_Freeze,
   'ctdetgt': CtdetTrainer_GT_Centerloss,

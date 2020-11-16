@@ -137,14 +137,9 @@ class PrefetchDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         img_id = self.images[index]
         img_info = self.load_image_func(ids=[img_id])[0]
-        img_path_T = os.path.join(self.img_dir, img_info['file_name'])
-        image_T = cv2.imread(img_path_T)
+        img_path = os.path.join(self.img_dir, img_info['file_name'])
+        image = cv2.imread(img_path)
 
-        img_path_R = img_path_T.replace("thermal_8_bit", "rgb_adjusted")
-        img_path_R = img_path_R.replace("jpeg", "jpg")
-        image_R = cv2.imread(img_path_R)
-
-        image = [image_R, image_T]
         images, meta = {}, {}
         for scale in opt.test_scales:
             if opt.task == 'ddd':

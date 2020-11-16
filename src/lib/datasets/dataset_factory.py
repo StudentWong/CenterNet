@@ -6,6 +6,7 @@ from .sample.ddd import DddDataset
 from .sample.exdet import EXDetDataset
 from .sample.ctdet import CTDetDataset
 from .sample.multi_pose import MultiPoseDataset
+from .sample.ctdet_fusion import CTDetDataset as CTDetDatasetFusion
 
 from .dataset.coco import COCO
 from .dataset.pascal import PascalVOC
@@ -14,6 +15,7 @@ from .dataset.coco_hp import COCOHP
 from .dataset.shangqi import ShangQi
 from .dataset.shangqi_3cat import ShangQi3Cat
 from .dataset.FLIR import FLIR
+from .dataset.FLIR_fusion import FLIR as FLIRFUSION
 
 
 dataset_factory = {
@@ -23,6 +25,7 @@ dataset_factory = {
   'coco_hp': COCOHP,
   'shangqi': ShangQi,
   'flir': FLIR,
+  'flirfusion': FLIRFUSION,
   'shangqi3class': ShangQi3Cat,
 }
 
@@ -30,6 +33,7 @@ _sample_factory = {
   'exdet': EXDetDataset,
   'ctdet': CTDetDataset,
   'ctdetgt': CTDetDataset,
+  'ctdetfusion': CTDetDatasetFusion,
   'ctdetnfs': CTDetDataset,
   'ctdetfreeze': CTDetDataset,
   'ddd': DddDataset,

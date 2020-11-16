@@ -50,7 +50,7 @@ class Debugger(object):
       num_classes = 5
       self.names = shangqi_class_name
 
-    elif num_classes == 3 or dataset == 'flir':
+    elif num_classes == 3 or dataset == 'flir' or dataset == 'flirfusion':
       num_classes = 3
       self.names = flir_class_name
 
