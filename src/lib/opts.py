@@ -176,6 +176,9 @@ class opts(object):
                              help='loss weight for human pose offset.')
     self.parser.add_argument('--hm_hp_weight', type=float, default=1,
                              help='loss weight for human keypoint heatmap.')
+    self.parser.add_argument('--attloss_weight', type=float, default=10,
+                             help='loss weight for att.')
+
     # ddd
     self.parser.add_argument('--dep_weight', type=float, default=1,
                              help='loss weight for depth.')
@@ -205,6 +208,8 @@ class opts(object):
                              help='threshold for centermap.')
     self.parser.add_argument('--aggr_weight', type=float, default=0.0,
                              help='edge aggregation weight.')
+    self.parser.add_argument('--adapt_thermal_weight', type=float, default=0.5,
+                             help='adapt thermal weight.')
     # multi_pose
     self.parser.add_argument('--dense_hp', action='store_true',
                              help='apply weighted pose regression near center '
@@ -331,7 +336,8 @@ class opts(object):
                    'wh': 2 if not opt.cat_spec_wh else 2 * opt.num_classes}
       if opt.reg_offset:
         opt.heads.update({'reg': 2})
-    elif opt.task == 'ctdetnfs' or opt.task == 'ctdetfreeze' or opt.task == 'ctdetgt' or opt.task == 'ctdetfusion':
+    elif opt.task == 'ctdetnfs' or opt.task == 'ctdetfreeze' or opt.task == 'ctdetgt' \
+            or opt.task == 'ctdetfusion' or opt.task == 'ctdetgtfusion' or opt.task == 'ctdetadapt':
       # assert opt.dataset in ['pascal', 'coco']
       opt.heads = {'hm': opt.num_classes,
                    'wh': 2 if not opt.cat_spec_wh else 2 * opt.num_classes}

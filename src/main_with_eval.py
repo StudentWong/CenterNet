@@ -39,7 +39,7 @@ def main(opt):
   opt.device = torch.device('cuda' if opt.gpus[0] >= 0 else 'cpu')
   
   print('Creating model...')
-  model = create_model(opt.arch, opt.heads, opt.head_conv)
+  model = create_model(opt.arch, opt.heads, opt.head_conv, opt.adapt_thermal_weight)
   # print(model.state_dict().keys())
   # exit()
   optimizer = torch.optim.Adam(model.parameters(), opt.lr)

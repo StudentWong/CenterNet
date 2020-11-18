@@ -17,6 +17,8 @@ from .networks.resnet_dcn_4c import get_pose_net as get_pose_net_dcn_4c
 from .networks.large_hourglass import get_large_hourglass_net
 from .networks.pose_dla_dcn_gt_centerloss import get_pose_net_gt_centerloss as get_dla_dcn_gt_centerloss
 from .networks.resnet_dcn_gt import get_pose_net as get_res_gt_net_dcn
+from .networks.resnet_dcn_gt_4c import get_pose_net as get_res_gt_net_dcn_4c
+from .networks.resnet_dcn_4c_share import get_pose_net as get_res_gt_net_dcn_4c_share
 
 _model_factory = {
   'res': get_pose_net, # default Resnet with deconv
@@ -27,18 +29,20 @@ _model_factory = {
   'dlagt': get_dla_dcn_gt_centerloss,
   'resdcn': get_pose_net_dcn,
   'resdcn4c': get_pose_net_dcn_4c,
+  'resdcn4cshare': get_res_gt_net_dcn_4c_share,
   'resdcngt': get_res_gt_net_dcn,
+  'resdcngt4c': get_res_gt_net_dcn_4c,
   'hourglass': get_large_hourglass_net,
 }
 
-def create_model(arch, heads, head_conv):
+def create_model(arch, heads, head_conv, adapt_thermal_weight=0.5):
   num_layers = int(arch[arch.find('_') + 1:]) if '_' in arch else 0
   arch = arch[:arch.find('_')] if '_' in arch else arch
   get_model = _model_factory[arch]
   # print(num_layers)
   # print(heads)
   # print(head_conv)
-  model = get_model(num_layers=num_layers, heads=heads, head_conv=head_conv)
+  model = get_model(num_layers=num_layers, heads=heads, head_conv=head_conv, adapt_thermal_weight=adapt_thermal_weight)
   return model
 
 def load_model(model, model_path, optimizer=None, resume=False, 

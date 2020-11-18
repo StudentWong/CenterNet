@@ -9,12 +9,15 @@ from .multi_pose import MultiPoseTrainer
 from .ctdet_NFS import CtdetTrainer_NFS
 from .ctdet_freeze_update import CtdetTrainer_Freeze
 from .ctdet_gt_centerloss import CtdetTrainer_GT_Centerloss
+from .ctdet_adaptation import CtdetTrainer as CtdetTrainer_adapt
 
 train_factory = {
   'exdet': ExdetTrainer, 
   'ddd': DddTrainer,
   'ctdet': CtdetTrainer,
   'ctdetfusion': CtdetTrainer,
+  'ctdetadapt': CtdetTrainer_adapt,
+  'ctdetgtfusion': CtdetTrainer_GT_Centerloss,
   'ctdetnfs': CtdetTrainer_NFS,
   'ctdetfreeze': CtdetTrainer_Freeze,
   'ctdetgt': CtdetTrainer_GT_Centerloss,
