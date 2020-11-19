@@ -20,6 +20,11 @@ class ModelWithLoss(torch.nn.Module):
     loss, loss_stats = self.loss(outputs, batch)
     return outputs[-1], loss, loss_stats
 
+  def forward_T(self, batch):
+    outputs = self.model.forward_T(batch['input'])
+    loss, loss_stats = self.loss(outputs, batch)
+    return outputs[-1], loss, loss_stats
+
 class BaseTrainer(object):
   def __init__(
     self, opt, model, optimizer=None):

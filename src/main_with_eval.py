@@ -5,7 +5,7 @@ from __future__ import print_function
 import _init_paths
 
 import os
-
+import cv2
 import torch
 import torch.utils.data
 import numpy as np
@@ -18,7 +18,7 @@ from trains.train_factory import train_factory
 from detectors.detector_factory import detector_factory
 from utils.utils import AverageMeter
 from progress.bar import Bar
-import cv2
+
 
 
 def main(opt):
@@ -39,7 +39,7 @@ def main(opt):
   opt.device = torch.device('cuda' if opt.gpus[0] >= 0 else 'cpu')
   
   print('Creating model...')
-  model = create_model(opt.arch, opt.heads, opt.head_conv, opt.adapt_thermal_weight)
+  model = create_model(opt.arch, opt.heads, opt.head_conv, opt.adapt_thermal_weight, opt.share_cut)
   # print(model.state_dict().keys())
   # exit()
   optimizer = torch.optim.Adam(model.parameters(), opt.lr)

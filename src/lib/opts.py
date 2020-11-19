@@ -176,8 +176,14 @@ class opts(object):
                              help='loss weight for human pose offset.')
     self.parser.add_argument('--hm_hp_weight', type=float, default=1,
                              help='loss weight for human keypoint heatmap.')
-    self.parser.add_argument('--attloss_weight', type=float, default=10,
+    self.parser.add_argument('--comatch_att_weight', type=float, default=1,
                              help='loss weight for att.')
+    self.parser.add_argument('--comatch_ft_weight', type=float, default=0.5,
+                             help='loss weight for att.')
+    self.parser.add_argument('--share_cut', type=float, default=0.1,
+                             help='share ratio cut')
+
+
 
     # ddd
     self.parser.add_argument('--dep_weight', type=float, default=1,
