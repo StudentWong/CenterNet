@@ -55,26 +55,28 @@ class CtdetLoss(torch.nn.Module):
       if opt.comatch_att_weight > 0:
         assert len(output['xR_G_att']) == len(output['xT_att'])
         l = len(output['xR_G_att'])
-        for ll in range(l):
-          # print("att:")
-          # print(output['xR_G_att'][ll].shape)
-          att_loss += ((output['xR_G_att'][ll] - output['xT_att'][ll]) ** 2).mean()
-          # print(torch.abs(output['xR_G_att'][ll] - output['xT_att'][ll]).max())
-          # att_loss += (torch.abs(output['xR_G_att'][ll] - output['xT_att'][ll])).mean()
-        att_loss = att_loss/l
+        if l > 0:
+          for ll in range(l):
+            # print("att:")
+            # print(output['xR_G_att'][ll].shape)
+            att_loss += ((output['xR_G_att'][ll] - output['xT_att'][ll]) ** 2).mean()
+            # print(torch.abs(output['xR_G_att'][ll] - output['xT_att'][ll]).max())
+            # att_loss += (torch.abs(output['xR_G_att'][ll] - output['xT_att'][ll])).mean()
+          att_loss = att_loss/l
 
 
       if opt.comatch_ft_weight > 0:
         assert len(output['comatch_xR_G']) == len(output['comatch_xR_O'])
         l = len(output['comatch_xR_G'])
-        for ll in range(l):
-          # print("ft:")
-          # print(output['comatch_xR_G'][ll].shape)
-          # print(torch.abs(output['comatch_xR_G'][ll] - output['comatch_xR_O'][ll]).max())
-          ft_loss += ((output['comatch_xR_G'][ll] - output['comatch_xR_O'][ll]) ** 2).mean()
-          # ft_loss += (torch.abs(output['comatch_xR_G'][ll] - output['comatch_xR_O'][ll])).mean()
-          # ft_loss -= torch.cosine_similarity(output['comatch_xR_G'][ll], output['comatch_xR_O'][ll], dim=1).mean()
-        ft_loss = ft_loss/l
+        if l > 0:
+          for ll in range(l):
+            # print("ft:")
+            # print(output['comatch_xR_G'][ll].shape)
+            # print(torch.abs(output['comatch_xR_G'][ll] - output['comatch_xR_O'][ll]).max())
+            ft_loss += ((output['comatch_xR_G'][ll] - output['comatch_xR_O'][ll]) ** 2).mean()
+            # ft_loss += (torch.abs(output['comatch_xR_G'][ll] - output['comatch_xR_O'][ll])).mean()
+            # ft_loss -= torch.cosine_similarity(output['comatch_xR_G'][ll], output['comatch_xR_O'][ll], dim=1).mean()
+          ft_loss = ft_loss/l
 
 
       if opt.wh_weight > 0:
@@ -274,8 +276,12 @@ class CtdetTrainer(BaseTrainer):
         epoch, iter_id, num_iters, phase=phase,
         total=bar.elapsed_td, eta=bar.eta_td)
       for l in avg_loss_stats:
-        avg_loss_stats[l].update(
-          loss_stats[l].mean().item(), batch['input'].size(0))
+        if isinstance(loss_stats[l], int):
+          avg_loss_stats[l].update(
+            loss_stats[l], batch['input'].size(0))
+        else:
+          avg_loss_stats[l].update(
+            loss_stats[l].mean().item(), batch['input'].size(0))
         Bar.suffix = Bar.suffix + '|{} {:.4f} '.format(l, avg_loss_stats[l].avg)
       if not opt.hide_data_time:
         Bar.suffix = Bar.suffix + '|Data {dt.val:.3f}s({dt.avg:.3f}s) ' \

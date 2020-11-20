@@ -633,7 +633,10 @@ class PoseResNet(nn.Module):
         xT = self.relu(xT)
         xT = self.maxpool(xT)
         ret = {}
-
+        ret['xR_G_att'] = []
+        ret['xT_att'] = []
+        ret['comatch_xR_G'] = []
+        ret['comatch_xR_O'] = []
         xR, xT = self.layer1([xR, xT])
         xR, xT = self.layer2([xR, xT])
         xR, xT = self.layer3([xR, xT])

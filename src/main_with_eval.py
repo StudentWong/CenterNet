@@ -40,6 +40,8 @@ def main(opt):
   
   print('Creating model...')
   model = create_model(opt.arch, opt.heads, opt.head_conv, opt.adapt_thermal_weight, opt.share_cut)
+  # print(model)
+  # exit()
   # print(model.state_dict().keys())
   # exit()
   optimizer = torch.optim.Adam(model.parameters(), opt.lr)
