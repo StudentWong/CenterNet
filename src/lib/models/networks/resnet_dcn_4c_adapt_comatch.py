@@ -866,7 +866,7 @@ class PoseResNet(nn.Module):
                     nn.init.constant_(m.bias, 0)
 
 
-resnet_spec = {18: (BasicBlock_share, [2, 2, 2, 2], [0.2, 0.4, 0.6, 0.8]),
+resnet_spec = {18: (BasicBlock_share, [2, 2, 2, 2], [0.1, 0.2, 0.3, 0.4]),
                34: (BasicBlock_share, [3, 4, 6, 3]),
                50: (Bottleneck, [3, 4, 6, 3]),
                101: (Bottleneck, [3, 4, 23, 3]),

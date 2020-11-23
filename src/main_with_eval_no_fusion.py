@@ -5,7 +5,7 @@ from __future__ import print_function
 import _init_paths
 
 import os
-
+import cv2
 import torch
 import torch.utils.data
 import numpy as np
@@ -18,7 +18,7 @@ from trains.train_factory import train_factory
 from detectors.detector_factory import detector_factory
 from utils.utils import AverageMeter
 from progress.bar import Bar
-import cv2
+
 
 
 def main(opt):
