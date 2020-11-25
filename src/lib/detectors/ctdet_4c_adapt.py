@@ -52,9 +52,9 @@ class CtdetDetector(BaseDetector):
       s = np.array([inp_width, inp_height], dtype=np.float32)
 
     trans_input = get_affine_transform(c, s, 0, [inp_width, inp_height])
-
     resized_image_R = cv2.resize(image_R, (new_width, new_height))
     resized_image_T = cv2.resize(image_T, (new_width, new_height))
+
     inp_image_R = cv2.warpAffine(
       resized_image_R, trans_input, (inp_width, inp_height),
       flags=cv2.INTER_LINEAR)

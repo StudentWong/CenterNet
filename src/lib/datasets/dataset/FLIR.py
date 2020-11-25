@@ -160,6 +160,7 @@ class FLIR(data.Dataset):
     coco_dets = self.coco.loadRes('{}/results.json'.format(save_dir))
     coco_eval = COCOeval(self.coco, coco_dets, "bbox")
     coco_eval.params.catIds = self._valid_ids
+    coco_eval.params.imgIds = self.images
     coco_eval.evaluate()
     coco_eval.accumulate()
     coco_eval.summarize()
@@ -171,7 +172,8 @@ class FLIR(data.Dataset):
     self.save_results(results, save_dir)
     coco_dets = self.coco.loadRes('{}/results.json'.format(save_dir))
     coco_eval = COCOeval(self.coco, coco_dets, "bbox")
-    coco_eval.params.catIds = [1, 2, 3]
+    coco_eval.params.catIds = self._valid_ids
+    coco_eval.params.imgIds = self.images
     coco_eval.evaluate()
     coco_eval.accumulate()
     coco_eval.summarize()

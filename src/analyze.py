@@ -7,7 +7,7 @@ import numpy as np
 #python analyze.py --logpath /home/lilium/windows_disk2/caijihuzhuo/CenterNet/exp/ctdet/FLIR_origin_benchmark_exclude/logs_2020-11-22-15-19/log.txt --train_val val --item loss
 #python analyze.py --logpath /home/lilium/windows_disk2/caijihuzhuo/CenterNet/exp/ctdetadapt/adapt_Tweight0.8_cut0.8/logs_2020-11-21-12-41/log.txt --train_val val --item loss
 #python analyze.py --logpath /home/lilium/windows_disk2/caijihuzhuo/CenterNet/exp/ctdetadapt/adapt_Tweight0.8_cut0.5/logs_2020-11-22-03-16/log.txt --train_val val --item loss
-
+#python analyze.py --logpath /home/lilium/windows_disk2/caijihuzhuo/CenterNet/exp/ctdet/FLIR_origin_benchmark_exclude/logs_2020-11-23-22-05/log.txt --train_val val --item loss
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--logpath', default='',

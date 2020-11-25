@@ -526,6 +526,7 @@ class PoseResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        exit()
         xR = x[:, 0:3, :, :]
         xT = x[:, 3:4, :, :].expand_as(xR)
 
@@ -866,16 +867,16 @@ class PoseResNet(nn.Module):
                     nn.init.constant_(m.bias, 0)
 
 
-resnet_spec = {18: (BasicBlock_share, [2, 2, 2, 2], [0.0, 0.0, 0.1, 0.1]),
-               34: (BasicBlock_share, [3, 4, 6, 3]),
-               50: (Bottleneck, [3, 4, 6, 3]),
-               101: (Bottleneck, [3, 4, 23, 3]),
-               152: (Bottleneck, [3, 8, 36, 3])}
-# resnet_spec = {18: (BasicBlock_share, [2, 2, 2, 2], [0.0, 0.0, 0.1, 0.4]),
+# resnet_spec = {18: (BasicBlock_share, [2, 2, 2, 2], [0.1, 0.2, 0.3, 0.4]),
 #                34: (BasicBlock_share, [3, 4, 6, 3]),
 #                50: (Bottleneck, [3, 4, 6, 3]),
 #                101: (Bottleneck, [3, 4, 23, 3]),
 #                152: (Bottleneck, [3, 8, 36, 3])}
+resnet_spec = {18: (BasicBlock_share, [2, 2, 2, 2], [0.2, 0.4, 0.6, 0.8]),
+               34: (BasicBlock_share, [3, 4, 6, 3]),
+               50: (Bottleneck, [3, 4, 6, 3]),
+               101: (Bottleneck, [3, 4, 23, 3]),
+               152: (Bottleneck, [3, 8, 36, 3])}
 
 
 def get_pose_net(num_layers, heads, head_conv=256, adapt_thermal_weight=0.5, share_cut=0.0):
@@ -885,6 +886,7 @@ def get_pose_net(num_layers, heads, head_conv=256, adapt_thermal_weight=0.5, sha
     share[i] = sh - share_cut
     if share[i]<0.0:
         share[i] = 0.0
+  print(share)
   model = PoseResNet(block_class, layers, heads, head_conv=head_conv, share=share, thermal_weight=adapt_thermal_weight)
   model.init_weights(num_layers)
   return model
