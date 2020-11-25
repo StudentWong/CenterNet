@@ -548,8 +548,6 @@ class PoseResNet(nn.Module):
 
         ret['comatch_xR_O'] = ret['comatch_xR_O'] + [xR]
         xR_G = self.comatch1(xR, xT)
-        # print(xR_G.max())
-        # exit()
         ret['comatch_xR_G'] = ret['comatch_xR_G'] + [xR_G]
 
         R_G_att, T_att = get_att(xR_G, xT)

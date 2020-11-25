@@ -21,6 +21,7 @@ from .networks.resnet_dcn_gt_4c import get_pose_net as get_res_gt_net_dcn_4c
 from .networks.resnet_dcn_4c_share import get_pose_net as get_res_gt_net_dcn_4c_share
 from .networks.resnet_dcn_4c_adapt_comatch import get_pose_net as get_res_gt_net_dcn_4c_share_co
 from .networks.resnet_dcn_4c_adapt_comatch_decouple import get_pose_net as get_res_gt_net_dcn_4c_share_decouple
+from .networks.resnet_dcn_4c_adapt_comatch_siam import get_pose_net as get_res_gt_net_dcn_4c_co_siam
 
 _model_factory = {
   'res': get_pose_net, # default Resnet with deconv
@@ -34,6 +35,7 @@ _model_factory = {
   'resdcn4cshare': get_res_gt_net_dcn_4c_share,
   'resdcn4cshareco': get_res_gt_net_dcn_4c_share_co,
   'resdcn4csharedecouple': get_res_gt_net_dcn_4c_share_decouple,
+  'resdcn4csiam': get_res_gt_net_dcn_4c_co_siam,
   'resdcngt': get_res_gt_net_dcn,
   'resdcngt4c': get_res_gt_net_dcn_4c,
   'hourglass': get_large_hourglass_net,
