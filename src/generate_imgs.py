@@ -231,6 +231,15 @@ if __name__ == '__main__':
     # exit()
     optimizer = torch.optim.Adam(model.parameters(), opt.lr)
     start_epoch = 0
+
+
+
+
+
+
+
+
+
     if opt.load_model != '':
         model, optimizer, start_epoch = load_model(
             model, opt.load_model, optimizer, opt.resume, opt.lr, opt.lr_step)

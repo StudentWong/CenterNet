@@ -16,6 +16,7 @@ detector_factory = {
   'exdet': ExdetDetector, 
   'ddd': DddDetector,
   'ctdet': CtdetDetector,
+  'ctdetadaptkitti': CtdetDetector,
   'ctdetfusion': CtdetDetector4c,
   'ctdetadapt': CtdetDetector4c_adapt,
   'ctdetgtfusion': CtdetDetector4c_NFS,

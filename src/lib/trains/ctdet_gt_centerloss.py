@@ -8,7 +8,10 @@ import numpy as np
 import time
 from progress.bar import Bar
 from models.losses import FocalLoss, CenterLoss_gt
-from models.networks.MemberShip_cuda.centerloss_cuda import CenterLoss_gt_cuda, CenterLoss_gt_eq1_cuda
+try:
+    from models.networks.MemberShip_cuda.centerloss_cuda import CenterLoss_gt_cuda, CenterLoss_gt_eq1_cuda
+except:
+    pass
 from utils.utils import AverageMeter
 from models.losses import RegL1Loss, RegLoss, NormRegL1Loss, RegWeightedL1Loss
 from models.decode import ctdet_decode

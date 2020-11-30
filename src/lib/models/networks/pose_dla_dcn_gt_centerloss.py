@@ -20,9 +20,12 @@ except:
     pass
 try:
     from ..membership import Membership_Activation, Membership_norm
-    from .MemberShip_cuda import Membership_norm_cuda
 except:
     from src.lib.models.membership import Membership_Activation, Membership_norm
+    pass
+try:
+    from .MemberShip_cuda import Membership_norm_cuda
+except:
     pass
 
 

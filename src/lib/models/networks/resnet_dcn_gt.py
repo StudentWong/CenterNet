@@ -19,9 +19,13 @@ from .DCNv2.dcn_v2 import DCN
 import torch.utils.model_zoo as model_zoo
 try:
     from ..membership import Membership_Activation, Membership_norm, Membership_custom
-    from .MemberShip_cuda import Membership_norm_cuda
+
 except:
     from src.lib.models.membership import Membership_Activation, Membership_norm
+    pass
+try:
+    from .MemberShip_cuda import Membership_norm_cuda
+except:
     pass
 
 # norm_fun = nn.BatchNorm2d

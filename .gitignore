@@ -15,7 +15,7 @@ preds/*
 __pycache__/
 *.py[cod]
 *$py.class
-
+src/lib/models/networks/DCNv2/*
 # C extensions
 *.so
 

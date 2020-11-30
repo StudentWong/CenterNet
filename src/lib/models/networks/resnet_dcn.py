@@ -258,6 +258,7 @@ class PoseResNet(nn.Module):
 
         x = self.deconv_layers(x)
         ret = {}
+        ret['ft_backbone'] = x
         for head in self.heads:
             if head == 'hm':
                 xx = self.__getattr__(head)[0](x)

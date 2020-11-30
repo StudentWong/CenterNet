@@ -7,6 +7,7 @@ from .sample.exdet import EXDetDataset
 from .sample.ctdet import CTDetDataset
 from .sample.multi_pose import MultiPoseDataset
 from .sample.ctdet_fusion import CTDetDataset as CTDetDatasetFusion
+from .sample.ctdet_adapt import CTDetDatasetadapt
 
 from .dataset.coco import COCO
 from .dataset.pascal import PascalVOC
@@ -16,12 +17,14 @@ from .dataset.shangqi import ShangQi
 from .dataset.shangqi_3cat import ShangQi3Cat
 from .dataset.FLIR import FLIR
 from .dataset.FLIR_fusion import FLIR as FLIRFUSION
+from .dataset.kitti_flir_adapt import KITTI_FLIR_adapt
 
 
 dataset_factory = {
   'coco': COCO,
   'pascal': PascalVOC,
   'kitti': KITTI,
+  'flirkitti': KITTI_FLIR_adapt,
   'coco_hp': COCOHP,
   'shangqi': ShangQi,
   'flir': FLIR,
@@ -33,6 +36,7 @@ _sample_factory = {
   'exdet': EXDetDataset,
   'ctdet': CTDetDataset,
   'ctdetgt': CTDetDataset,
+  'ctdetadaptkitti': CTDetDatasetadapt,
   'ctdetfusion': CTDetDatasetFusion,
   'ctdetadapt': CTDetDatasetFusion,
   'ctdetgtfusion': CTDetDatasetFusion,

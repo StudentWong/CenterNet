@@ -184,7 +184,6 @@ class opts(object):
                              help='share ratio cut')
 
 
-
     # ddd
     self.parser.add_argument('--dep_weight', type=float, default=1,
                              help='loss weight for depth.')
@@ -244,6 +243,31 @@ class opts(object):
                              help='use ground truth human joint local offset.')
     self.parser.add_argument('--eval_oracle_dep', action='store_true', 
                              help='use ground truth depth.')
+
+    # gan
+    self.parser.add_argument('--lambda_identity', type=float, default=0.5,
+                                 help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss.'
+                                 'For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
+    self.parser.add_argument('--input_nc', type=int, default=3, help='# of input image channels')
+    self.parser.add_argument('--output_nc', type=int, default=3, help='# of output image channels')
+    self.parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
+    self.parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
+    self.parser.add_argument('--which_model_netD', type=str, default='basic', help='selects model to use for netD')
+    self.parser.add_argument('--which_model_netG', type=str, default='resnet_6blocks',
+                             help='selects model to use for netG')
+    self.parser.add_argument('--norm', type=str, default='instance', help='instance normalization or batch normalization')
+    self.parser.add_argument('--no_dropout', action='store_true', help='no dropout for the generator')
+    self.parser.add_argument('--init_type', type=str, default='normal',
+                             help='network initialization [normal|xavier|kaiming|orthogonal]')
+    self.parser.add_argument('--no_lsgan', action='store_true',
+                             help='do *not* use least square GAN, if false, use vanilla GAN')
+    self.parser.add_argument('--pool_size', type=int, default=25,
+                             help='the size of image buffer that stores previously generated images')
+    self.parser.add_argument('--n_layers_D', type=int, default=3, help='only used if which_model_netD==n_layers')
+    self.parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
+    self.parser.add_argument('--which_direction', type=str, default='AtoB', help='AtoB or BtoA')
+    self.parser.add_argument('--lambda_A', type=float, default=10.0, help='weight for cycle loss (A -> B -> A)')
+    self.parser.add_argument('--lambda_B', type=float, default=10.0, help='weight for cycle loss (B -> A -> B)')
 
   def parse(self, args=''):
     if args == '':
@@ -307,7 +331,10 @@ class opts(object):
 
   def update_dataset_info_and_set_heads(self, opt, dataset):
     input_h, input_w = dataset.default_resolution
-    opt.mean, opt.std = dataset.mean, dataset.std
+    try:
+        opt.mean, opt.std = dataset.mean, dataset.std
+    except:
+        pass
     opt.num_classes = dataset.num_classes
 
     # input_h(w): opt.input_h overrides opt.input_res overrides dataset default
@@ -343,7 +370,8 @@ class opts(object):
       if opt.reg_offset:
         opt.heads.update({'reg': 2})
     elif opt.task == 'ctdetnfs' or opt.task == 'ctdetfreeze' or opt.task == 'ctdetgt' \
-            or opt.task == 'ctdetfusion' or opt.task == 'ctdetgtfusion' or opt.task == 'ctdetadapt':
+            or opt.task == 'ctdetfusion' or opt.task == 'ctdetgtfusion' \
+            or opt.task == 'ctdetadapt' or opt.task == 'ctdetadaptkitti':
       # assert opt.dataset in ['pascal', 'coco']
       opt.heads = {'hm': opt.num_classes,
                    'wh': 2 if not opt.cat_spec_wh else 2 * opt.num_classes}
