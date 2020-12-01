@@ -11,6 +11,7 @@ from .ctdet_freeze_update import CtdetTrainer_Freeze
 from .ctdet_gt_centerloss import CtdetTrainer_GT_Centerloss
 from .ctdet_adaptation import CtdetTrainer as CtdetTrainer_adapt
 from .ctdet_adapt import CtdetTrainer as CtdetTrainer_adapt_kitti
+from .ctdet_adapt_one_way import CtdetTrainer as CtdetTrainer_adapt_kitti_oneway
 
 train_factory = {
   'exdet': ExdetTrainer, 
@@ -19,6 +20,7 @@ train_factory = {
   'ctdetfusion': CtdetTrainer,
   'ctdetadapt': CtdetTrainer_adapt,
   'ctdetadaptkitti': CtdetTrainer_adapt_kitti,
+  'ctdetadaptkittioneway': CtdetTrainer_adapt_kitti_oneway,
   'ctdetgtfusion': CtdetTrainer_GT_Centerloss,
   'ctdetnfs': CtdetTrainer_NFS,
   'ctdetfreeze': CtdetTrainer_Freeze,

@@ -63,6 +63,9 @@ def main(opt):
   trainer = Trainer(opt, model, gan)
   trainer.set_device(opt.gpus, opt.chunk_sizes, opt.device)
 
+  # print(trainer.optimizer_model_G.param_groups[0]['lr'])
+  # exit()
+
   print('Setting up data...')
   val_loader = torch.utils.data.DataLoader(
       Dataset(opt, 'val'),
@@ -124,15 +127,30 @@ def main(opt):
       save_model_fun(os.path.join(opt.save_dir, 'model_last.pth'),
                  epoch, model)
     logger.write('\n')
+
+    if epoch+5 in opt.lr_step:
+        lr = trainer.optimizer_model_G.param_groups[1]['lr'] \
+             * (opt.lr_step_ratio ** (opt.lr_step.index(epoch) + 1))
+        trainer.optimizer_model_G.param_groups[1]['lr'] = lr
+
+        lr = trainer.optimizer_D.param_groups[0]['lr'] \
+             * (opt.lr_step_ratio ** (opt.lr_step.index(epoch) + 1))
+        trainer.optimizer_D.param_groups[0]['lr'] = lr
+
     if epoch in opt.lr_step:
       save_model_fun(os.path.join(opt.save_dir, 'model_{}.pth'.format(epoch)),
                  epoch, model)
-      lr = opt.lr * (opt.lr_step_ratio ** (opt.lr_step.index(epoch) + 1))
-      print('Drop LR to', lr)
-      for param_group in trainer.optimizer_model_G.param_groups:
-          param_group['lr'] = lr
-      for param_group in trainer.optimizer_D.param_groups:
-          param_group['lr'] = lr
+      lr = trainer.optimizer_model_G.param_groups[0]['lr'] \
+           * (opt.lr_step_ratio ** (opt.lr_step.index(epoch) + 1))
+      trainer.optimizer_model_G.param_groups[0]['lr'] = lr
+
+      # print('Drop LR to', lr)
+      # for param_group in trainer.optimizer_model_G.param_groups:
+      #     lr = param_group['lr'] * (opt.lr_step_ratio ** (opt.lr_step.index(epoch) + 1))
+      #     param_group['lr'] = lr
+      # for param_group in trainer.optimizer_D.param_groups:
+      #     lr = param_group['lr'] * (opt.lr_step_ratio ** (opt.lr_step.index(epoch) + 1))
+      #     param_group['lr'] = lr
   logger.close()
 
 

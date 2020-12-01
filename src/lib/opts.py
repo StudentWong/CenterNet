@@ -253,7 +253,7 @@ class opts(object):
     self.parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
     self.parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
     self.parser.add_argument('--which_model_netD', type=str, default='basic', help='selects model to use for netD')
-    self.parser.add_argument('--which_model_netG', type=str, default='resnet_6blocks',
+    self.parser.add_argument('--which_model_netG', type=str, default='resnet_9blocks',
                              help='selects model to use for netG')
     self.parser.add_argument('--norm', type=str, default='instance', help='instance normalization or batch normalization')
     self.parser.add_argument('--no_dropout', action='store_true', help='no dropout for the generator')
@@ -371,7 +371,7 @@ class opts(object):
         opt.heads.update({'reg': 2})
     elif opt.task == 'ctdetnfs' or opt.task == 'ctdetfreeze' or opt.task == 'ctdetgt' \
             or opt.task == 'ctdetfusion' or opt.task == 'ctdetgtfusion' \
-            or opt.task == 'ctdetadapt' or opt.task == 'ctdetadaptkitti':
+            or opt.task == 'ctdetadapt' or opt.task == 'ctdetadaptkitti' or opt.task == 'ctdetadaptkittioneway':
       # assert opt.dataset in ['pascal', 'coco']
       opt.heads = {'hm': opt.num_classes,
                    'wh': 2 if not opt.cat_spec_wh else 2 * opt.num_classes}

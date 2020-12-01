@@ -37,6 +37,7 @@ _sample_factory = {
   'ctdet': CTDetDataset,
   'ctdetgt': CTDetDataset,
   'ctdetadaptkitti': CTDetDatasetadapt,
+  'ctdetadaptkittioneway': CTDetDatasetadapt,
   'ctdetfusion': CTDetDatasetFusion,
   'ctdetadapt': CTDetDatasetFusion,
   'ctdetgtfusion': CTDetDatasetFusion,

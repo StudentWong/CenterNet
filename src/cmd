@@ -3,3 +3,5 @@ python main_with_eval.py ctdetgt --arch dlagt_34 --exp_id pascal_dla_384 --datas
 python main_with_eval.py ctdetgt --arch resdcngt_18 --dataset pascal --batch_size 8 --master_batch -1 --lr 5e-4 --gpus 0 --num_workers 8 --num_epochs 100 --lr_step 60,80 --val_intervals 1 --center_weight 0.1
 
 python ctdetadapt --arch resdcn4cshare_18 --exp_id fusion_384 --dataset flirfusion --num_epochs 70 --lr_step 45,60 --batch_size 32 --eq1 --flip_test --adapt_thermal_weight 0.2
+
+python main_with_eval_adapt.py ctdetadaptkittioneway --arch resdcn_18 --exp_id fusion_384 --dataset flirkitti --num_epochs 70 --lr_step 45,60 --batch_size 4 --eq1 --flip_test --no_dropout
