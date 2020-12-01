@@ -217,7 +217,7 @@ class BaseTrainer(object):
       # print(batch.keys())
       model_with_loss(batch)
       loss_stats = {'loss': 0, 'flir_hm_loss': 0, 'flir_wh_loss': 0, 'flir_off_loss': 0,
-                   'kitti_hm_loss': 0, 'kitti_wh_loss': 0, 'kitti_off_loss': 0,
+                   'kitti_hm_loss': 0, 'kitti_wh_loss': 0, 'kitti_off_loss': 0, 'loss_D_A': 0, 'loss_D_B': 0,
                    'loss_G_A': 0, 'loss_G_B': 0, 'loss_cycle_A': 0, 'loss_cycle_B': 0,
                    'loss_idt_A': 0, 'loss_idt_B': 0, 'sement': 0}
       model_with_loss.backward_model_G(batch, self.optimizer_model_G, loss_stats)

@@ -3,11 +3,14 @@ from __future__ import division
 from __future__ import print_function
 
 import time
+import cv2
 import torch
 import itertools
 from progress.bar import Bar
+import numpy as np
 from models.data_parallel import DataParallel
 from utils.utils import AverageMeter
+import os
 
 
 class ModelWithLoss(torch.nn.Module):
@@ -61,7 +64,12 @@ class ModelWithLoss(torch.nn.Module):
     # print(batch['flir_input'].shape)
     # print(self.model_gan.fake_B.shape)
     # outputs = self.model_detect(torch.cat([batch['flir_input'], self.model_gan.fake_B], dim=0))
-    self.outputs_Fake = self.model_detect(self.model_gan.fake_B)
+    # shape = self.model_gan.fake_B.shape
+    # self.fake_B = self.model_gan.fake_B.mean(dim=1, keepdim=True).expand(shape)
+    self.fake_B = self.model_gan.fake_B
+
+    # self.outputs_Fake = self.model_detect(self.model_gan.fake_B)
+    self.outputs_Fake = self.model_detect(self.fake_B)
     self.outputs_True = self.model_detect(batch['flir_input'])
 
     # print(len(self.outputs_Fake))
@@ -69,7 +77,7 @@ class ModelWithLoss(torch.nn.Module):
     self.ft_True = self.outputs_True[-1]['ft_backbone']
     # N*D*W*H
 
-    self.loss_sement = self.cal_sem_loss(batch).mean()
+    self.loss_sement = self.cal_sem_loss(batch).mean() * 1000
     # print(batch['flir_hm'].shape)
     # print(batch['kitti_hm'].shape)
     # print(outputs)
@@ -88,13 +96,14 @@ class ModelWithLoss(torch.nn.Module):
     if lambda_idt > 0:
       # G_A should be identity if real_B is fed.
       self.model_gan.idt_A = self.model_gan.netG_A(self.model_gan.real_B)
-      self.model_gan.loss_idt_A = self.model_gan.criterionIdt(self.model_gan.idt_A, self.model_gan.real_B) * lambda_B * lambda_idt
+      self.model_gan.loss_idt_A = self.model_gan.criterionIdt(self.model_gan.idt_A, self.model_gan.real_B) * \
+                                  lambda_B * lambda_idt * 2
 
     else:
       self.model_gan.loss_idt_A = 0
 
     # GAN loss D_A(G_A(A))
-    self.model_gan.loss_G_A = self.model_gan.criterionGAN(self.model_gan.netD_A(self.model_gan.fake_B), True)
+    self.model_gan.loss_G_A = self.model_gan.criterionGAN(self.model_gan.netD_A(self.model_gan.fake_B), True) * 2
     loss_fake, loss_stats_fake = self.loss_detect(self.outputs_Fake, batch, "Fake")
     loss_true, loss_stats_true = self.loss_detect(self.outputs_True, batch, "True")
 
@@ -103,7 +112,7 @@ class ModelWithLoss(torch.nn.Module):
     self.loss_model_G = self.model_gan.loss_G_A + \
                         self.model_gan.loss_idt_A + \
                         loss_fake + loss_true + \
-                        self.loss_sement*200
+                        self.loss_sement
 
     lossstat['loss_G_A'] = self.model_gan.loss_G_A
     lossstat['loss_idt_A'] = self.model_gan.loss_idt_A
@@ -124,12 +133,13 @@ class ModelWithLoss(torch.nn.Module):
     del self.outputs_Fake, self.outputs_True, self.loss_model_G
 
   def backward_D(self, optimizer_D, lossstat):
-    self.model_gan.set_requires_grad([self.model_gan.netD_A, self.model_gan.netD_B], True)
+    self.model_gan.set_requires_grad(self.model_gan.netD_A, True)
     optimizer_D.zero_grad()
     self.model_gan.backward_D_A()
-    self.model_gan.backward_D_B()
+    # self.model_gan.backward_D_B()
+    self.model_gan.loss_D_A = self.model_gan.loss_D_A * 2
     lossstat['loss_D_A'] = self.model_gan.loss_D_A
-    lossstat['loss_D_B'] = self.model_gan.loss_D_B
+    # lossstat['loss_D_B'] = self.model_gan.loss_D_B
     optimizer_D.step()
 
   def forward_T(self, batch):
@@ -146,6 +156,13 @@ class BaseTrainer(object):
     # self.optimizer = optimizer
     self.loss_stats, self.loss = self._get_losses(opt)
     self.model_with_loss = ModelWithLoss(model, self.loss, gan)
+    self.flir_mean = np.array([0.44719302, 0.44719302, 0.44719302],
+                    dtype=np.float32).reshape(1, 1, 3)
+    self.flir_std = np.array([0.27809835, 0.27809835, 0.27809835],
+                   dtype=np.float32).reshape(1, 1, 3)
+
+    self.kitti_mean = np.array([0.485, 0.456, 0.406], np.float32).reshape(1, 1, 3)
+    self.kitti_std = np.array([0.229, 0.224, 0.225], np.float32).reshape(1, 1, 3)
 
     params_model_G = [
       {"params": model.parameters(), "lr": opt.lr},
@@ -202,8 +219,27 @@ class BaseTrainer(object):
           batch[k] = batch[k].to(device=opt.device, non_blocking=True)
       # print(batch.keys())
       model_with_loss(batch)
+      if iter_id == 0:
+        output_save_dir_fake = os.path.join(opt.save_dir, "kittifake", "{:03d}_fake.png".format(epoch))
+        # print(model_with_loss.model_gan.fake_B[1, :, :, :].shape)
+        save_pic_fake = model_with_loss.fake_B[1, :, :, :].permute(1, 2, 0).detach().cpu().numpy()
+        # print(save_pic.shape)
+        save_pic_fake = (save_pic_fake * self.flir_std) + self.flir_mean
+        save_pic_fake = (save_pic_fake.clip(max=1, min=0)*255).astype(np.uint8)
+        cv2.imwrite(output_save_dir_fake, save_pic_fake)
+
+        output_save_dir_true = os.path.join(opt.save_dir, "kittifake", "{:03d}_true.png".format(epoch))
+        # print(model_with_loss.model_gan.true_B[1, :, :, :].shape)
+        save_pic_true = batch["kitti_input"][1, :, :, :].permute(1, 2, 0).detach().cpu().numpy()
+        # print(save_pic.shape)
+        save_pic_true = (save_pic_true * self.kitti_std) + self.kitti_mean
+        save_pic_true = (save_pic_true.clip(max=1, min=0) * 255).astype(np.uint8)
+        cv2.imwrite(output_save_dir_true, save_pic_true)
+        # print(save_pic.max())
+        # print(save_pic.min())
+        # exit()
       loss_stats = {'loss': 0, 'flir_hm_loss': 0, 'flir_wh_loss': 0, 'flir_off_loss': 0,
-                   'kitti_hm_loss': 0, 'kitti_wh_loss': 0, 'kitti_off_loss': 0,
+                   'kitti_hm_loss': 0, 'kitti_wh_loss': 0, 'kitti_off_loss': 0, 'loss_D_A': 0, 'loss_D_B': 0,
                    'loss_G_A': 0, 'loss_G_B': 0, 'loss_cycle_A': 0, 'loss_cycle_B': 0,
                    'loss_idt_A': 0, 'loss_idt_B': 0, 'sement': 0}
       model_with_loss.backward_model_G(batch, self.optimizer_model_G, loss_stats)
@@ -223,8 +259,12 @@ class BaseTrainer(object):
         epoch, iter_id, num_iters, phase=phase,
         total=bar.elapsed_td, eta=bar.eta_td)
       for l in avg_loss_stats:
-        avg_loss_stats[l].update(
-          loss_stats[l].mean().item(), batch['flir_input'].size(0))
+        if isinstance(loss_stats[l], int):
+          avg_loss_stats[l].update(
+            loss_stats[l], batch['flir_input'].size(0))
+        else:
+          avg_loss_stats[l].update(
+            loss_stats[l].mean().item(), batch['flir_input'].size(0))
         Bar.suffix = Bar.suffix + '|{} {:.4f} '.format(l, avg_loss_stats[l].avg)
       if not opt.hide_data_time:
         Bar.suffix = Bar.suffix + '|Data {dt.val:.3f}s({dt.avg:.3f}s) ' \

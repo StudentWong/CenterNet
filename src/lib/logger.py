@@ -19,6 +19,9 @@ class Logger(object):
     """Create a summary writer logging to log_dir."""
     if not os.path.exists(opt.save_dir):
       os.makedirs(opt.save_dir)
+    if opt.task == "ctdetadaptkittioneway" and \
+            not os.path.exists(os.path.join(opt.save_dir, "kittifake")):
+      os.makedirs(os.path.join(opt.save_dir, "kittifake"))
     if not os.path.exists(opt.debug_dir):
       os.makedirs(opt.debug_dir)
    

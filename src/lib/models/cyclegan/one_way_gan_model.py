@@ -61,6 +61,9 @@ class OneWayGANModel(BaseModel):
 
     def forward(self):
         self.fake_B = self.netG_A(self.real_A)
+        shape = self.fake_B.shape
+        assert shape[1] == 3
+        self.fake_B = self.fake_B.mean(dim=1, keepdim=True).expand(shape)
 
 
     def backward_D_basic(self, netD, real, fake):

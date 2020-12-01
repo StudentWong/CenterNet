@@ -13,6 +13,7 @@ from opts import opts
 from models.model import create_model, load_model, save_model, load_model_freeze, save_model_freeze
 from models.data_parallel import DataParallel
 from models.cyclegan.cycle_gan_model import CycleGANModel
+from models.cyclegan.one_way_gan_model import OneWayGANModel
 from logger import Logger
 from datasets.dataset_factory import get_dataset, dataset_factory
 from trains.train_factory import train_factory
@@ -42,8 +43,13 @@ def main(opt):
   
   print('Creating model...')
   model = create_model(opt.arch, opt.heads, opt.head_conv, opt.adapt_thermal_weight, opt.share_cut)
-  gan = CycleGANModel()
-  gan.initialize(opt)
+  if opt.task == "ctdetadaptkitti":
+      gan = CycleGANModel()
+      gan.initialize(opt)
+  elif opt.task == "ctdetadaptkittioneway":
+      gan = OneWayGANModel()
+      gan.initialize(opt)
+
   # exit()
   # print(model)
   # exit()
