@@ -136,11 +136,11 @@ def main(opt):
 
     if epoch+5 in opt.lr_step:
         lr = trainer.optimizer_model_G.param_groups[1]['lr'] \
-             * (opt.lr_step_ratio ** (opt.lr_step.index(epoch) + 1))
+             * (opt.lr_step_ratio ** (opt.lr_step.index(epoch+5) + 1))
         trainer.optimizer_model_G.param_groups[1]['lr'] = lr
 
         lr = trainer.optimizer_D.param_groups[0]['lr'] \
-             * (opt.lr_step_ratio ** (opt.lr_step.index(epoch) + 1))
+             * (opt.lr_step_ratio ** (opt.lr_step.index(epoch+5) + 1))
         trainer.optimizer_D.param_groups[0]['lr'] = lr
 
     if epoch in opt.lr_step:

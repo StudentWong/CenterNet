@@ -12,12 +12,14 @@ from .ctdet_gt_centerloss import CtdetTrainer_GT_Centerloss
 from .ctdet_adaptation import CtdetTrainer as CtdetTrainer_adapt
 from .ctdet_adapt import CtdetTrainer as CtdetTrainer_adapt_kitti
 from .ctdet_adapt_one_way import CtdetTrainer as CtdetTrainer_adapt_kitti_oneway
+from .ctdet_fusion import CtdetTrainer as CtdetTrainer_fusion
 
 train_factory = {
   'exdet': ExdetTrainer, 
   'ddd': DddTrainer,
   'ctdet': CtdetTrainer,
   'ctdetfusion': CtdetTrainer,
+  'ctdetfusiondynamic': CtdetTrainer_fusion,
   'ctdetadapt': CtdetTrainer_adapt,
   'ctdetadaptkitti': CtdetTrainer_adapt_kitti,
   'ctdetadaptkittioneway': CtdetTrainer_adapt_kitti_oneway,

@@ -5,3 +5,7 @@ python main_with_eval.py ctdetgt --arch resdcngt_18 --dataset pascal --batch_siz
 python ctdetadapt --arch resdcn4cshare_18 --exp_id fusion_384 --dataset flirfusion --num_epochs 70 --lr_step 45,60 --batch_size 32 --eq1 --flip_test --adapt_thermal_weight 0.2
 
 python main_with_eval_adapt.py ctdetadaptkittioneway --arch resdcn_18 --exp_id fusion_384 --dataset flirkitti --num_epochs 70 --lr_step 45,60 --batch_size 4 --eq1 --flip_test --no_dropout
+
+python main_with_eval.py ctdetfusiondynamic --arch resdcndynamic_18 --exp_id fusion_dynamic_384 --dataset flirfusion --num_epochs 70 --lr_step 45,60 --flip_test --batch_size 24
+
+python main_with_eval.py ctdetfusiondynamic --arch resdcndynamic_18 --exp_id fusion_dynamic_384 --dataset flirfusion --num_epochs 70 --lr_step 5,12,20 --lr_step_ratio 0.22 --flip_test --batch_size 16 --save_dir bn_affine_true

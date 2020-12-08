@@ -18,6 +18,7 @@ from .dataset.shangqi_3cat import ShangQi3Cat
 from .dataset.FLIR import FLIR
 from .dataset.FLIR_fusion import FLIR as FLIRFUSION
 from .dataset.kitti_flir_adapt import KITTI_FLIR_adapt
+from .dataset.FLIR_copy import FLIR as FLIR_exclude
 
 
 dataset_factory = {
@@ -28,6 +29,7 @@ dataset_factory = {
   'coco_hp': COCOHP,
   'shangqi': ShangQi,
   'flir': FLIR,
+  'flirexclude': FLIR_exclude,
   'flirfusion': FLIRFUSION,
   'shangqi3class': ShangQi3Cat,
 }
@@ -39,6 +41,7 @@ _sample_factory = {
   'ctdetadaptkitti': CTDetDatasetadapt,
   'ctdetadaptkittioneway': CTDetDatasetadapt,
   'ctdetfusion': CTDetDatasetFusion,
+  'ctdetfusiondynamic': CTDetDatasetFusion,
   'ctdetadapt': CTDetDatasetFusion,
   'ctdetgtfusion': CTDetDatasetFusion,
   'ctdetnfs': CTDetDataset,
@@ -49,6 +52,8 @@ _sample_factory = {
 
 
 def get_dataset(dataset, task):
+  # print(dataset)
+  # print(task)
   class Dataset(dataset_factory[dataset], _sample_factory[task]):
     pass
   return Dataset

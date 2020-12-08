@@ -3,7 +3,8 @@ import torch.nn as nn
 from torch.nn import init
 import functools
 from torch.optim import lr_scheduler
-
+from ..networks.DCNv2.dcn_v2 import DCN
+# from .DCNv2
 ###############################################################################
 # Helper Functions
 ###############################################################################
@@ -184,6 +185,13 @@ class ResnetGenerator(nn.Module):
 
         for i in range(n_downsampling):
             mult = 2**(n_downsampling - i)
+            # print("asd\nasd")
+            model += [DCN(ngf * mult, ngf * mult,
+                       kernel_size=(3, 3), stride=1,
+                       padding=1, dilation=1, deformable_groups=1),
+                      norm_layer(int(ngf * mult)),
+                      nn.ReLU(True)]
+
             model += [nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2),
                                          kernel_size=3, stride=2,
                                          padding=1, output_padding=1,

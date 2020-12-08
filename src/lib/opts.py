@@ -171,6 +171,8 @@ class opts(object):
                              help='loss weight for bounding box size.')
     self.parser.add_argument('--center_weight', type=float, default=0.1)
     self.parser.add_argument('--lamda_regular_weight', type=float, default=0.2)
+    self.parser.add_argument('--attloss_weight', type=float, default=0.2)
+
     # multi_pose
     self.parser.add_argument('--hp_weight', type=float, default=1,
                              help='loss weight for human pose offset.')
@@ -253,7 +255,7 @@ class opts(object):
     self.parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
     self.parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
     self.parser.add_argument('--which_model_netD', type=str, default='basic', help='selects model to use for netD')
-    self.parser.add_argument('--which_model_netG', type=str, default='resnet_9blocks',
+    self.parser.add_argument('--which_model_netG', type=str, default='resnet_6blocks',
                              help='selects model to use for netG')
     self.parser.add_argument('--norm', type=str, default='instance', help='instance normalization or batch normalization')
     self.parser.add_argument('--no_dropout', action='store_true', help='no dropout for the generator')
@@ -371,7 +373,8 @@ class opts(object):
         opt.heads.update({'reg': 2})
     elif opt.task == 'ctdetnfs' or opt.task == 'ctdetfreeze' or opt.task == 'ctdetgt' \
             or opt.task == 'ctdetfusion' or opt.task == 'ctdetgtfusion' \
-            or opt.task == 'ctdetadapt' or opt.task == 'ctdetadaptkitti' or opt.task == 'ctdetadaptkittioneway':
+            or opt.task == 'ctdetadapt' or opt.task == 'ctdetadaptkitti' \
+            or opt.task == 'ctdetadaptkittioneway' or opt.task == "ctdetfusiondynamic":
       # assert opt.dataset in ['pascal', 'coco']
       opt.heads = {'hm': opt.num_classes,
                    'wh': 2 if not opt.cat_spec_wh else 2 * opt.num_classes}

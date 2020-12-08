@@ -493,10 +493,11 @@ class PoseResNet(nn.Module):
         ret['xR_att'] = ret['xR_att'] + [R_att]
         ret['xT_att'] = ret['xT_att'] + [T_att]
 
-        if attention:
-            x = self.att_fusion4(xR, xT)
-        else:
-            x = (1-self.thermal_weight)*xR + self.thermal_weight*xT
+        # if attention:
+        #     x = self.att_fusion4(xR, xT)
+        # else:
+        #     x = (1-self.thermal_weight)*xR + self.thermal_weight*xT
+        x = xR + xT
         # exit()
         x = self.deconv_layers(x)
         for head in self.heads:
